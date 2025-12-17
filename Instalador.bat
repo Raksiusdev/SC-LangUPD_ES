@@ -47,28 +47,28 @@ echo     if exist "%%%%d:\" ^(
 echo         echo Comprobando disco %%%%d: ^>^> "%%LOG_FILE%%"
 echo.
 echo         REM Buscar en Program Files
-echo         if exist "%%%%d:\StarCitizen\LIVE\data" ^(
-echo             set "DEST_DIR=%%%%d:\StarCitizen\LIVE\data\Localization\spanish_^(spain^)"
+echo         if exist "%%%%d:\StarCitizen\LIVE\" ^(
+echo             set "DEST_DIR=%%%%d:\StarCitizen\LIVE\"
 echo             echo ENCONTRADO en %%%%d:\Program Files ^>^> "%%LOG_FILE%%"
 echo             goto :found
 echo         ^)
 echo.
 echo         REM Buscar en carpeta directa
-echo         if exist "%%%%d:\StarCitizen\LIVE\data" ^(
-echo             set "DEST_DIR=%%%%d:\StarCitizen\LIVE\data\Localization\spanish_^(spain^)"
+echo         if exist "%%%%d:\StarCitizen\LIVE\" ^(
+echo             set "DEST_DIR=%%%%d:\StarCitizen\LIVE\"
 echo             echo ENCONTRADO en %%%%d:\StarCitizen ^>^> "%%LOG_FILE%%"
 echo             goto :found
 echo         ^)
 echo.
 echo         REM Buscar en RSI Launcher
-echo         if exist "%%%%d:\StarCitizen\LIVE\data" ^(
-echo             set "DEST_DIR=%%%%d:\Roberts Space Industries\StarCitizen\LIVE\data\Localization\spanish_^(spain^)"
+echo         if exist "%%%%d:\StarCitizen\LIVE\" ^(
+echo             set "DEST_DIR=%%%%d:\StarCitizen\LIVE\"
 echo             echo ENCONTRADO en %%%%d:\Roberts Space Industries ^>^> "%%LOG_FILE%%"
 echo             goto :found
 echo         ^)
 echo.
 echo         REM Buscar en Games
-echo         if exist "%%%%d:\Games\StarCitizen\LIVE\data" ^(
+echo         if exist "%%%%d:\Games\StarCitizen\LIVE\" ^(
 echo             set "DEST_DIR=%%%%d:\Games\StarCitizen\LIVE\data\Localization\spanish_^(spain^)"
 echo             echo ENCONTRADO en %%%%d:\Games ^>^> "%%LOG_FILE%%"
 echo             goto :found
