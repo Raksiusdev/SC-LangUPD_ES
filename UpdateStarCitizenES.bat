@@ -8,7 +8,7 @@ set "GITHUB_OWNER=Thord82"
 set "GITHUB_REPO=Star_citizen_ES"
 set "ZIP_NAME=Star_citizen_ES.zip"
 set "RELEASE_FILE=%USERPROFILE%\%GITHUB_REPO%_last_release.txt"
-set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%_update_log.txt"
+set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%%_update_log.txt"
 REM === Escribir en log ===
 echo ========================================>> "%LOG_FILE%"
 echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
@@ -53,10 +53,12 @@ REM === Verificar conexión a internet ===
 ping -n 1 github.com >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo Sin conexión a internet >> "%LOG_FILE%"
+    echo ======================================== >> "%LOG_FILE%"
     exit /b 0
 )
 
 REM === Obtener última release (versión) desde GitHub ===
+echo Consultando última release en GitHub... >> "%LOG_FILE%"
 for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$owner = '%GITHUB_OWNER%'; $repo = '%GITHUB_REPO%'; " ^
     "$uri = 'https://api.github.com/repos/' + $owner + '/' + $repo + '/releases/latest'; " ^
@@ -77,33 +79,54 @@ if not defined LAST_RELEASE (
 
 echo Última release remota: %LAST_RELEASE% >> "%LOG_FILE%"
 
-REM === Leer release local (con trim total de espacios) ===
+REM === Verificar si existen archivos de traducción en el juego ===
+set "FILES_EXIST=0"
+if exist "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)\global.ini" (
+    set "FILES_EXIST=1"
+    echo Archivos de traducción encontrados en el juego >> "%LOG_FILE%"
+) else (
+    echo Archivos de traducción NO encontrados en el juego >> "%LOG_FILE%"
+)
+
+REM === Leer release local ===
 set "LOCAL_RELEASE=none"
-if exist "!RELEASE_FILE!" (
-    for /f "usebackq tokens=*" %%b in ("!RELEASE_FILE!") do set "LOCAL_RELEASE=%%b"
-)
-if "!LOCAL_RELEASE!"=="none" (
-    echo Primera instalación >> "%LOG_FILE%"
+if exist "%RELEASE_FILE%" (
+    for /f "usebackq tokens=*" %%b in ("%RELEASE_FILE%") do set "LOCAL_RELEASE=%%b"
+    echo Release local guardada: !LOCAL_RELEASE! >> "%LOG_FILE%"
 ) else (
-    echo Release local: !LOCAL_RELEASE! >> "%LOG_FILE%"
+    echo No hay registro de versión instalada >> "%LOG_FILE%"
 )
 
-if defined LOCAL_RELEASE (
-    echo La variable LOCAL_RELEASE está definida
-) else (
-    echo La variable LOCAL_RELEASE está VACÍA o no definida
+REM === Decidir si actualizar ===
+set "NEED_UPDATE=0"
+
+REM Caso 1: No hay archivos de traducción (reinstalación del juego)
+if "!FILES_EXIST!"=="0" (
+    echo RAZÓN: Archivos de traducción no encontrados, descargando... >> "%LOG_FILE%"
+    set "NEED_UPDATE=1"
+    goto :do_update
 )
 
-REM === Comparar releases ===
-if "%LAST_RELEASE%"=="!LOCAL_RELEASE!" (
-    echo Ya actualizado >> "%LOG_FILE%"
-    exit /b 0
+REM Caso 2: Versión diferente
+if not "%LAST_RELEASE%"=="!LOCAL_RELEASE!" (
+    echo RAZÓN: Nueva versión disponible ^(%LAST_RELEASE%^) >> "%LOG_FILE%"
+    set "NEED_UPDATE=1"
+    goto :do_update
 )
+
+REM Caso 3: Todo está actualizado
+echo Ya actualizado ^(versión %LAST_RELEASE%^) >> "%LOG_FILE%"
+echo ======================================== >> "%LOG_FILE%"
+exit /b 0
+
+:do_update
 if "%LAST_RELEASE%"=="no-release-yet" (
-    echo No hay releases disponibles >> "%LOG_FILE%"
+    echo No hay releases disponibles para descargar >> "%LOG_FILE%"
+    echo ======================================== >> "%LOG_FILE%"
     exit /b 0
 )
-echo Nueva actualización detectada (%LAST_RELEASE%) >> "%LOG_FILE%"
+
+echo Iniciando descarga e instalación... >> "%LOG_FILE%"
 
 REM === Crear carpeta temporal ===
 set "TEMP_DIR=%USERPROFILE%\Downloads\%GITHUB_REPO%_temp"
@@ -113,36 +136,41 @@ mkdir "%TEMP_DIR%" >nul 2>&1
 REM === Descargar ZIP ===
 set "ZIP_URL=https://github.com/%GITHUB_OWNER%/%GITHUB_REPO%/releases/latest/download/%ZIP_NAME%"
 set "ZIP_FILE=%TEMP_DIR%\%ZIP_NAME%"
-echo Descargando actualización... >> "%LOG_FILE%"
+echo Descargando %ZIP_NAME%... >> "%LOG_FILE%"
 powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%ZIP_URL%', '%ZIP_FILE%'); exit 0 } catch { exit 1 }"
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Falló la descarga >> "%LOG_FILE%"
     rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
     exit /b 1
 )
+
 REM === Expandir ZIP ===
 echo Extrayendo archivos... >> "%LOG_FILE%"
 powershell -NoProfile -Command "try { Expand-Archive -Force '%ZIP_FILE%' '%TEMP_DIR%\extracted' } catch { exit 1 }"
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Falló al expandir >> "%LOG_FILE%"
+    echo ERROR: Falló al expandir el archivo >> "%LOG_FILE%"
     rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
     exit /b 1
 )
 
 REM === Crear directorio destino si no existe ===
-if not exist "%DEST_DIR%" mkdir "%DEST_DIR%"
+if not exist "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)" (
+    echo Creando carpeta de traducción... >> "%LOG_FILE%"
+    mkdir "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)" >nul 2>&1
+)
 
 REM === Copiar archivos ===
-echo Instalando traducción... >> "%LOG_FILE%"
-xcopy "%TEMP_DIR%\extracted\*" "%DEST_DIR%\" /E /Y /I
+echo Instalando traducción en el juego... >> "%LOG_FILE%"
+xcopy "%TEMP_DIR%\extracted\*" "%DEST_DIR%\" /E /Y /I /Q
 
 REM === Guardar nueva release ===
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ver = '!LAST_RELEASE!'; " ^
-    "$ver | Out-File -FilePath '%RELEASE_FILE%' -Encoding ascii -NoNewline"
+echo %LAST_RELEASE%> "%RELEASE_FILE%"
+echo Versión instalada: %LAST_RELEASE% >> "%LOG_FILE%"
 
 REM === Limpieza ===
 rd /s /q "%TEMP_DIR%" >nul 2>&1
-echo Actualización completada: %LAST_RELEASE% >> "%LOG_FILE%"
+echo Actualización completada exitosamente >> "%LOG_FILE%"
 echo ======================================== >> "%LOG_FILE%"
 exit /b 0
