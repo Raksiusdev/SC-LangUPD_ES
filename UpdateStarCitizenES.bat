@@ -1,4 +1,4 @@
-@echo on
+@echo off
 setlocal enabledelayedexpansion
 REM ========================================
 REM Script de Actualización Star Citizen ES
@@ -77,15 +77,6 @@ if not defined LAST_RELEASE (
 
 echo Última release remota: %LAST_RELEASE% >> "%LOG_FILE%"
 
-echo.
-echo ========================================
-echo DEBUG: Última release obtenida de GitHub
-echo LAST_RELEASE = [%LAST_RELEASE%]
-echo Longitud: 
-echo "%LAST_RELEASE%" | find /v "" | find /c /v ""
-echo ========================================
-pause
-
 REM === Leer release local (con trim total de espacios) ===
 set "LOCAL_RELEASE=none"
 if exist "!RELEASE_FILE!" (
@@ -97,19 +88,11 @@ if "!LOCAL_RELEASE!"=="none" (
     echo Release local: !LOCAL_RELEASE! >> "%LOG_FILE%"
 )
 
-echo.
-echo ========================================
-echo DEBUG: Leyendo archivo local %RELEASE_FILE%
-type "%RELEASE_FILE%"
-echo.
-echo LOCAL_RELEASE = [!LOCAL_RELEASE!]
 if defined LOCAL_RELEASE (
     echo La variable LOCAL_RELEASE está definida
 ) else (
     echo La variable LOCAL_RELEASE está VACÍA o no definida
 )
-echo ========================================
-pause
 
 REM === Comparar releases ===
 if "%LAST_RELEASE%"=="!LOCAL_RELEASE!" (
@@ -148,13 +131,12 @@ if %ERRORLEVEL% neq 0 (
 
 REM === Crear directorio destino si no existe ===
 if not exist "%DEST_DIR%" mkdir "%DEST_DIR%"
+
 REM === Copiar archivos ===
 echo Instalando traducción... >> "%LOG_FILE%"
 xcopy "%TEMP_DIR%\extracted\*" "%DEST_DIR%\" /E /Y /I
 
 REM === Guardar nueva release ===
-REM echo %LAST_RELEASE% > "%RELEASE_FILE%"
-REM <nul set /p =!LAST_RELEASE! > "%RELEASE_FILE%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ver = '!LAST_RELEASE!'; " ^
     "$ver | Out-File -FilePath '%RELEASE_FILE%' -Encoding ascii -NoNewline"
