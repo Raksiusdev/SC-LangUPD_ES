@@ -1,4 +1,4 @@
-# 🌐 Star Citizen - Traducción al Español
+# 🌐 Star Citizen - Traducción al Español (Sistema de Auto-Actualización)
 
 <div align="center">
 
@@ -7,186 +7,172 @@
 ![Auto Update](https://img.shields.io/badge/Auto-Update-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-**Traducción colaborativa al español de Star Citizen con sistema de actualización automática**
+**Sistema de actualización automática para la traducción al español de Star Citizen**
 
-[🚀 Instalación Rápida](#-instalación) · [📖 Documentación](#-cómo-funciona) · [❓ FAQ](#-preguntas-frecuentes) · [🐛 Reportar Problema](https://github.com/Thord82/Star_citizen_ES/issues)
+[🚀 Instalación](#-instalación-rápida) · [📖 Características](#-características) · [❓ FAQ](#-preguntas-frecuentes) · [🐛 Reportar Problema](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
 
 </div>
 
 ---
 
-## 📋 Contenido
+## 📋 ¿Qué es esto?
 
-- [Características](#-características)
-- [Requisitos](#-requisitos)
-- [Instalación](#-instalación)
-  - [Método 1: Instalación Automática](#método-1-instalación-automática-recomendada)
-  - [Método 2: Instalación Manual](#método-2-instalación-manual)
-- [Cómo Funciona](#-cómo-funciona)
-- [Verificación](#-verificación)
-- [Gestión del Sistema](#-gestión-del-sistema)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Solución de Problemas](#-solución-de-problemas)
-- [Preguntas Frecuentes](#-preguntas-frecuentes)
-- [Contribuir](#-contribuir)
-- [Licencia](#-licencia)
+Este es un **sistema de actualización automática** que mantiene tu traducción al español de Star Citizen siempre actualizada sin que tengas que hacer nada.
+
+### 🎯 Lo que hace:
+
+- ✅ **Detecta automáticamente** dónde tienes instalado Star Citizen (en cualquier disco: C:, D:, E:, etc.)
+- ✅ **Verifica actualizaciones** desde el repositorio oficial de traducción
+- ✅ **Descarga e instala** solo cuando hay versiones nuevas
+- ✅ **Se ejecuta automáticamente** cada vez que inicias Windows
+- ✅ **Funciona en segundo plano** sin interrumpir tu trabajo
+- ✅ **Guarda un log** de todas las operaciones
 
 ---
 
 ## ✨ Características
 
-- 🔄 **Actualización Automática** - Se actualiza al iniciar Windows sin intervención manual
-- 🔍 **Detección Inteligente** - Encuentra Star Citizen automáticamente en cualquier disco (C: a Z:)
-- 💾 **Backup Automático** - Crea respaldo antes de cada actualización
-- 📊 **Registro Detallado** - Log completo de todas las operaciones
-- ⚡ **Eficiente** - Solo descarga cuando hay cambios nuevos
-- 🔒 **Seguro** - Verifica integridad y conectividad antes de actualizar
-- 🎯 **Silencioso** - Funciona en segundo plano sin interrumpir
+| Característica | Descripción |
+|----------------|-------------|
+| 🔍 **Detección Inteligente** | Encuentra Star Citizen en todos los discos automáticamente |
+| 🔄 **Actualización Automática** | Se ejecuta al iniciar Windows sin intervención |
+| 📊 **Log Detallado** | Registro completo de todas las operaciones |
+| ⚡ **Eficiente** | Solo descarga cuando detecta cambios |
+| 🎮 **Compatible** | Funciona con instalaciones en cualquier ubicación |
+| 🔒 **Seguro** | Código abierto y auditable |
 
 ---
 
-## 💻 Requisitos
+## 🚀 Instalación Rápida
 
-- **Sistema Operativo:** Windows 10 (1809+) o Windows 11
-- **Permisos:** Derechos de administrador para la instalación
-- **Conectividad:** Conexión a Internet activa
-- **Software:** PowerShell 5.1+ (incluido en Windows)
-- **Espacio:** ~50MB libres para archivos temporales
+### Paso 1: Descargar el Instalador
 
----
+**Descarga:** [`InstalarAutoUpdate.bat`](https://github.com/Raksiusdev/SC-LangUPD_ES/raw/main/InstalarAutoUpdate.bat)
 
-## 🚀 Instalación
+### Paso 2: Ejecutar como Administrador
 
-### Método 1: Instalación Automática (Recomendada)
+1. **Clic derecho** sobre `InstalarAutoUpdate.bat`
+2. Selecciona **"Ejecutar como administrador"**
+3. Espera a que termine
 
-1. **Descarga los archivos necesarios:**
-   - `InstalarAutoUpdate.bat`
-   - `UpdateStarCitizenES.bat`
-   - `UpdateStarCitizenES.xml`
+### Paso 3: ¡Listo!
 
-2. **Ejecuta el instalador:**
-   - Haz clic derecho en `InstalarAutoUpdate.bat`
-   - Selecciona **"Ejecutar como administrador"**
-   - Espera a que termine la instalación
+El instalador hará automáticamente:
 
-3. **¡Listo!** El sistema está configurado y funcionando
-
-```cmd
-# El instalador automático:
-# ✓ Crea la carpeta C:\Scripts\
-# ✓ Copia el script de actualización
-# ✓ Configura la tarea programada
-# ✓ Verifica que todo funcione correctamente
+```
+✅ Crear carpeta C:\Scripts\
+✅ Instalar el script de actualización
+✅ Configurar tarea programada
+✅ Ejecutar la primera actualización
 ```
 
-### Método 2: Instalación Manual
+**Verás algo como esto:**
 
-#### Paso 1: Preparar el Script
+```
+================================================
+  INSTALADOR - Star Citizen ES Auto-Update
+================================================
 
-1. Crea la carpeta `C:\Scripts\` (si no existe)
-2. Copia `UpdateStarCitizenES.bat` a `C:\Scripts\`
+[OK] Ejecutando con privilegios de administrador
 
-#### Paso 2: Configurar Tarea Programada
+[1/3] Creando carpeta de scripts...
+[OK] Carpeta creada: C:\Scripts
 
-**Opción A: Importar XML**
+[2/3] Creando script de actualización...
+[OK] Script creado correctamente
 
-1. Abre **Programador de tareas** (`Win + S` → escribe "Programador de tareas")
-2. Click derecho en el panel izquierdo → **"Importar tarea..."**
-3. Selecciona `UpdateStarCitizenES.xml`
-4. Verifica que la ruta del script sea correcta
-5. Introduce tu contraseña si se solicita
-6. Click en **Aceptar**
+[3/3] Configurando tarea programada...
+[OK] Tarea programada creada exitosamente
 
-**Opción B: Crear Manualmente**
+================================================
+  INSTALACIÓN COMPLETADA
+================================================
 
-```cmd
-schtasks /create /tn "UpdateStarCitizenES" /tr "C:\Scripts\UpdateStarCitizenES.bat" /sc onlogon /rl highest /f
+========================================
+  EJECUTANDO PRIMERA ACTUALIZACIÓN
+========================================
+
+Buscando Star Citizen...
+Descargando traducción...
+Instalando archivos...
+¡Actualización completada!
 ```
 
 ---
 
-## 🔧 Cómo Funciona
+## 📁 ¿Qué se Instala?
 
-### Flujo de Actualización
-
-```mermaid
-graph TD
-    A[Inicio de Windows] --> B[Script se ejecuta automáticamente]
-    B --> C{¿Conexión a Internet?}
-    C -->|No| D[Termina sin cambios]
-    C -->|Sí| E[Busca Star Citizen en todos los discos]
-    E --> F{¿Encontrado?}
-    F -->|No| G[Usa ruta por defecto]
-    F -->|Sí| H[Verifica último commit en GitHub]
-    G --> H
-    H --> I{¿Hay actualización?}
-    I -->|No| D
-    I -->|Sí| J[Crea backup de traducción actual]
-    J --> K[Descarga nueva versión]
-    K --> L[Extrae archivos]
-    L --> M[Instala traducción]
-    M --> N[Actualiza registro local]
-    N --> O[Limpia archivos temporales]
-    O --> P[Fin - Traducción actualizada]
-```
-
-### Ubicaciones de Búsqueda
-
-El script busca Star Citizen en estas rutas (en todos los discos):
-
-```
-[Disco]:\Program Files\Roberts Space Industries\StarCitizen\LIVE\data\Localization\spanish_(spain)
-[Disco]:\StarCitizen\LIVE\data\Localization\spanish_(spain)
-[Disco]:\Roberts Space Industries\StarCitizen\LIVE\data\Localization\spanish_(spain)
-[Disco]:\Games\StarCitizen\LIVE\data\Localization\spanish_(spain)
-```
-
-### Archivos Generados
-
-| Archivo | Ubicación | Descripción |
-|---------|-----------|-------------|
-| `Star_citizen_ES_last_commit.txt` | `%USERPROFILE%` | Registra el último commit instalado |
-| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%` | Log detallado de operaciones |
-| Backup | `[Ruta del juego]_backup_YYYYMMDD` | Copia de seguridad anterior |
+| Archivo/Carpeta | Ubicación | Descripción |
+|-----------------|-----------|-------------|
+| `UpdateStarCitizenES.bat` | `C:\Scripts\` | Script de actualización |
+| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones |
+| `Star_citizen_ES_last_release.txt` | `%USERPROFILE%\` | Versión instalada |
+| Tarea programada | Programador de Tareas | `UpdateStarCitizenES` |
 
 ---
 
-## ✅ Verificación
+## 🔍 ¿Dónde Busca Star Citizen?
 
-### Comprobar que está instalado
+El script busca **automáticamente** en todos los discos (C: a Z:) en estas ubicaciones:
 
-```cmd
-# Ver información de la tarea
-schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
-
-# Ver si el script existe
-dir C:\Scripts\UpdateStarCitizenES.bat
+```
+✓ [Disco]:\Program Files\Roberts Space Industries\StarCitizen\
+✓ [Disco]:\StarCitizen\
+✓ [Disco]:\Roberts Space Industries\StarCitizen\
+✓ [Disco]:\Games\StarCitizen\
 ```
 
-### Probar el sistema
+**No necesitas configurar nada** - el script detecta la instalación automáticamente.
 
-**Método 1: Ejecutar manualmente**
+---
+
+## ✅ Verificar que Funciona
+
+### Ver el Log
+
+Abre el log para ver todas las operaciones:
+
 ```cmd
+notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
+```
+
+**Verás información como:**
+```
+========================================
+Inicio: 17/12/2025 15:30:45
+========================================
+Buscando Star Citizen en todos los discos...
+Comprobando disco C:
+Comprobando disco D:
+ENCONTRADO en D:\StarCitizen
+Ruta detectada correctamente
+Destino: "D:\StarCitizen"
+Última release remota: 3.24.3
+Primera instalación
+Nueva actualización detectada (3.24.3)
+Descargando actualización...
+Extrayendo archivos...
+Instalando traducción...
+Actualización completada: 3.24.3
+========================================
+```
+
+### Ejecutar Manualmente
+
+Puedes ejecutar la actualización cuando quieras:
+
+```cmd
+# Ejecutar desde la tarea programada
 schtasks /run /tn "UpdateStarCitizenES"
-```
 
-**Método 2: Reiniciar Windows**
-- Reinicia tu PC
-- El script se ejecutará automáticamente
-
-**Método 3: Ejecutar el script directamente**
-```cmd
+# O ejecutar el script directamente
 C:\Scripts\UpdateStarCitizenES.bat
 ```
 
-### Revisar el Log
+### Ver Estado de la Tarea
 
 ```cmd
-# Abrir el log con el Bloc de notas
-notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
-
-# O ver las últimas líneas en PowerShell
-Get-Content $env:USERPROFILE\Star_citizen_ES_update_log.txt -Tail 20
+schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
 ```
 
 ---
@@ -196,6 +182,9 @@ Get-Content $env:USERPROFILE\Star_citizen_ES_update_log.txt -Tail 20
 ### Comandos Útiles
 
 ```cmd
+# Ver información de la tarea
+schtasks /query /tn "UpdateStarCitizenES"
+
 # Ejecutar actualización ahora
 schtasks /run /tn "UpdateStarCitizenES"
 
@@ -205,211 +194,224 @@ schtasks /change /tn "UpdateStarCitizenES" /disable
 # Reactivar
 schtasks /change /tn "UpdateStarCitizenES" /enable
 
-# Ver estado
-schtasks /query /tn "UpdateStarCitizenES"
-
-# Ver última ejecución
-schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v | findstr "Última"
-```
-
-### Modificar Configuración
-
-**Cambiar horario de ejecución:**
-
-1. Abre **Programador de tareas**
-2. Busca `UpdateStarCitizenES`
-3. Clic derecho → **Propiedades**
-4. Pestaña **Desencadenadores** → Editar o Nuevo
-5. Configura según tus preferencias
-
-**Ejemplo: Ejecutar diariamente a las 3:00 AM**
-```cmd
-schtasks /change /tn "UpdateStarCitizenES" /tr "C:\Scripts\UpdateStarCitizenES.bat" /sc daily /st 03:00
-```
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-Star_citizen_ES/
-├── 📄 README.md                      # Este archivo
-├── 📜 UpdateStarCitizenES.bat        # Script principal de actualización
-├── 📋 UpdateStarCitizenES.xml        # Configuración de tarea programada
-├── 🚀 InstalarAutoUpdate.bat         # Instalador automático
-├── 📦 Star_citizen_ES.zip            # Archivos de traducción (releases)
-└── 📖 docs/
-    ├── INSTALL.md                    # Guía detallada de instalación
-    ├── TROUBLESHOOTING.md            # Solución de problemas
-    └── CONTRIBUTING.md               # Guía de contribución
-```
-
----
-
-## 🔍 Solución de Problemas
-
-### El script no se ejecuta al iniciar
-
-**Solución:**
-```cmd
-# Verificar que la tarea existe
-schtasks /query /tn "UpdateStarCitizenES"
-
-# Recrear la tarea
+# Eliminar completamente
 schtasks /delete /tn "UpdateStarCitizenES" /f
-schtasks /create /tn "UpdateStarCitizenES" /tr "C:\Scripts\UpdateStarCitizenES.bat" /sc onlogon /rl highest /f
+del C:\Scripts\UpdateStarCitizenES.bat
 ```
 
-### No encuentra Star Citizen
+### Actualizar el Sistema
 
-**Solución manual:**
+Si hay una nueva versión del instalador/script:
 
-1. Abre `C:\Scripts\UpdateStarCitizenES.bat` con el Bloc de notas
-2. Busca la sección `:found`
-3. Añade tu ruta personalizada antes de esa línea:
+1. **Descarga** el nuevo `InstalarAutoUpdate.bat`
+2. **Ejecuta como administrador** - sobrescribirá la versión anterior
+3. ¡Listo!
 
-```batch
-if exist "X:\TuRutaPersonalizada\StarCitizen\LIVE\data" (
-    set "DEST_DIR=X:\TuRutaPersonalizada\StarCitizen\LIVE\data\Localization\spanish_(spain)"
-    goto :found
-)
+---
+
+## 🔄 Cómo Funciona
+
+### Flujo de Actualización
+
+```mermaid
+graph TD
+    A[Windows inicia] --> B[Tarea programada se activa]
+    B --> C{¿Internet disponible?}
+    C -->|No| D[Termina sin cambios]
+    C -->|Sí| E[Busca Star Citizen en todos los discos]
+    E --> F[Consulta última versión en GitHub]
+    F --> G{¿Hay actualización?}
+    G -->|No| D
+    G -->|Sí| H[Descarga ZIP de traducción]
+    H --> I[Extrae archivos]
+    I --> J[Instala en carpeta del juego]
+    J --> K[Guarda versión instalada]
+    K --> L[Limpia archivos temporales]
+    L --> M[Fin ✅]
 ```
 
-### Error de permisos
+### Detección de Versiones
 
-**Solución:**
-```cmd
-# Ejecutar como administrador
-runas /user:Administrator "C:\Scripts\UpdateStarCitizenES.bat"
+El sistema usa **releases de GitHub** para determinar si hay actualizaciones:
 
-# O modificar permisos de la carpeta
-icacls "C:\Scripts" /grant %USERNAME%:F /T
-```
-
-### No hay conexión a GitHub
-
-**Verificar conectividad:**
-```cmd
-ping github.com
-curl -I https://api.github.com/repos/Thord82/Star_citizen_ES/commits
-```
-
-### Log muestra errores
-
-Revisa el log completo:
-```cmd
-notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
-```
-
-Errores comunes:
-- `Sin conexión a internet` → Verifica tu conexión
-- `No se pudo obtener info de GitHub` → GitHub puede estar caído
-- `Falló la descarga` → Verifica espacio en disco
-- `Falló al expandir` → El ZIP puede estar corrupto
+1. Consulta la API de GitHub: `https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest`
+2. Compara con la versión local guardada en `Star_citizen_ES_last_release.txt`
+3. Si son diferentes → descarga e instala
+4. Si son iguales → termina sin hacer nada
 
 ---
 
 ## ❓ Preguntas Frecuentes
 
-### ¿Necesito configurar algo manualmente?
+### ¿Necesito configurar algo?
 
-No. El script detecta automáticamente la ubicación de Star Citizen en todos los discos duros. Solo en casos muy específicos con rutas personalizadas necesitarías editar el script.
+**No.** El instalador hace todo automáticamente. Solo tienes que ejecutarlo como administrador.
 
-### ¿Qué pasa si Star Citizen ya está actualizado?
+### ¿Detecta automáticamente dónde tengo el juego?
 
-El script verifica el último commit de GitHub. Si ya tienes la última versión, termina inmediatamente sin descargar nada ni modificar archivos.
+**Sí.** El script busca en todos los discos (C: a Z:) en las ubicaciones más comunes de Star Citizen.
+
+### ¿Qué pasa si ya está actualizado?
+
+El script verifica la versión en GitHub. Si ya tienes la última, termina inmediatamente sin descargar nada.
 
 ### ¿Consume muchos recursos?
 
-No. El script tarda entre 5-30 segundos dependiendo de si hay actualización. Solo usa recursos cuando se ejecuta y se cierra inmediatamente después.
+**No.** El script tarda 5-30 segundos en ejecutarse y solo cuando hay actualizaciones. El resto del tiempo no consume nada.
 
 ### ¿Puedo desactivarlo temporalmente?
 
-Sí:
+**Sí:**
 ```cmd
 schtasks /change /tn "UpdateStarCitizenES" /disable
 ```
 
-### ¿Cómo restauro un backup?
-
-Los backups se guardan en carpetas con fecha. Para restaurar:
-
-1. Ve a la carpeta del juego
-2. Busca carpetas tipo `spanish_(spain)_backup_20251217`
-3. Copia el contenido de vuelta a `spanish_(spain)`
-
-### ¿Funciona con versiones PTU/EPTU?
-
-El script está configurado para la versión LIVE. Para PTU, edita el script y cambia `\LIVE\` por `\PTU\`.
+Para reactivarlo:
+```cmd
+schtasks /change /tn "UpdateStarCitizenES" /enable
+```
 
 ### ¿Afecta al rendimiento del juego?
 
-No. La traducción son solo archivos de texto que el juego carga. No afecta al rendimiento.
+**No.** Son solo archivos de texto de traducción. No afectan al rendimiento ni modifican archivos del juego.
 
-### ¿Puedo usar esto en varios PCs?
+### ¿Funciona con PTU o EPTU?
 
-Sí. Instala en cada PC donde juegues Star Citizen.
+El script está configurado para la versión **LIVE** del juego. Para PTU necesitarías editar el script manualmente.
 
----
+### ¿Qué pasa si borro accidentalmente los archivos?
 
-## 🤝 Contribuir
+Simplemente vuelve a ejecutar el instalador. Recreará todo desde cero.
 
-¡Las contribuciones son bienvenidas! Si quieres ayudar a mejorar la traducción o el sistema de actualización:
+### ¿Es seguro?
 
-### Reportar Problemas
+**Sí.** El código es completamente abierto y auditable. Solo descarga archivos desde el repositorio oficial de traducción en GitHub.
 
-1. Ve a [Issues](https://github.com/Thord82/Star_citizen_ES/issues)
-2. Busca si ya existe un reporte similar
-3. Si no, crea uno nuevo con:
-   - Descripción detallada del problema
-   - Pasos para reproducirlo
-   - Log del script (si aplica)
-   - Versión de Windows
+### ¿Necesito ejecutarlo cada vez que inicio Windows?
 
-### Mejorar la Traducción
-
-1. Fork este repositorio
-2. Crea una rama para tus cambios (`git checkout -b mejora/descripcion`)
-3. Edita los archivos de traducción
-4. Commit tus cambios (`git commit -m 'Mejora: descripción'`)
-5. Push a tu fork (`git push origin mejora/descripcion`)
-6. Abre un Pull Request
-
-### Mejorar el Script
-
-Si tienes ideas para mejorar el sistema de actualización, abre un Issue o Pull Request con tu propuesta.
+**No.** Se ejecuta automáticamente al iniciar sesión. No tienes que hacer nada.
 
 ---
 
-## 📜 Licencia
+## 🐛 Solución de Problemas
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
+### El instalador dice "Necesita ejecutarse como Administrador"
+
+**Solución:**
+1. Clic derecho en `InstalarAutoUpdate.bat`
+2. **"Ejecutar como administrador"**
+
+### No encuentra Star Citizen
+
+**Causa:** Instalación en ubicación no estándar
+
+**Solución:**
+1. Abre `C:\Scripts\UpdateStarCitizenES.bat` con el Bloc de notas
+2. Busca la sección de búsqueda de discos
+3. Añade tu ubicación personalizada:
+
+```batch
+if exist "X:\TuRuta\StarCitizen\LIVE" (
+    set "DEST_DIR=X:\TuRuta\StarCitizen"
+    echo ENCONTRADO en X:\TuRuta >> "%LOG_FILE%"
+    goto :found
+)
+```
+
+### Error "No se pudo obtener la versión de GitHub"
+
+**Causas posibles:**
+- Sin conexión a internet
+- GitHub está caído
+- Firewall bloqueando la conexión
+
+**Solución:**
+```cmd
+# Verificar conexión
+ping github.com
+
+# Probar manualmente
+curl https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest
+```
+
+### La tarea no se ejecuta al iniciar
+
+**Verificar:**
+```cmd
+schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
+```
+
+**Recrear:**
+```cmd
+schtasks /delete /tn "UpdateStarCitizenES" /f
+schtasks /create /tn "UpdateStarCitizenES" /tr "C:\Scripts\UpdateStarCitizenES.bat" /sc onlogon /rl highest /f
+```
+
+### Error al descargar/extraer archivos
+
+**Revisa el log:**
+```cmd
+notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
+```
+
+**Errores comunes:**
+- `ERROR: Falló la descarga` → Verifica conexión a internet y espacio en disco
+- `ERROR: Falló al expandir` → El ZIP puede estar corrupto, intenta de nuevo
 
 ---
 
 ## 👥 Créditos
 
-- **Comunidad Star Citizen ES** - Por la traducción colaborativa
-- **Thord82** - Mantenimiento del repositorio
-- **Contribuidores** - Ver [Contributors](https://github.com/Thord82/Star_citizen_ES/graphs/contributors)
+- **Traducción oficial:** [Thord82](https://github.com/Thord82) - [Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)
+- **Sistema de actualización:** [Raksiusdev](https://github.com/Raksiusdev)
+- **Comunidad Star Citizen ES** - Por el apoyo y feedback
+
+---
+
+## 📜 Licencia
+
+Este proyecto está bajo la Licencia MIT - Ver el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
 
 ## 🔗 Enlaces Útiles
 
-- [Thord82 en GitHub](https://github.com/Thord82/Star_citizen_ES)
+- 🎮 [Star Citizen Official](https://robertsspaceindustries.com/)
+- 💬 [Comunidad Star Citizen España](https://discord.gg/starcitizenes)
+- 📖 [Repositorio de Traducción Oficial](https://github.com/Thord82/Star_citizen_ES)
+- 🐛 [Reportar Problemas](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
+- 📚 [Issue Council (RSI)](https://issue-council.robertsspaceindustries.com/)
+
+---
+
+## 🆘 Soporte
+
+¿Necesitas ayuda?
+
+1. **Revisa las [FAQ](#-preguntas-frecuentes)**
+2. **Consulta [Solución de Problemas](#-solución-de-problemas)**
+3. **Revisa el log:** `%USERPROFILE%\Star_citizen_ES_update_log.txt`
+4. **Abre un [Issue en GitHub](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)**
+
+Al reportar problemas, incluye:
+- ✅ Contenido del log
+- ✅ Versión de Windows
+- ✅ Ubicación de Star Citizen
+- ✅ Mensaje de error exacto
 
 ---
 
 <div align="center">
 
-**¿Te ha sido útil este proyecto?** ⭐ Dale una estrella al repo
+**¿Te ha sido útil?** ⭐ Dale una estrella al repositorio
 
-**¿Encontraste un problema?** 🐛 [Repórtalo aquí](https://github.com/Thord82/Star_citizen_ES/issues)
+**¿Problemas?** 🐛 [Abre un Issue](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
 
-**¿Quieres contribuir?** 🤝 [Lee la guía de contribución](#-contribuir)
+**¿Quieres contribuir?** 🤝 ¡Los Pull Requests son bienvenidos!
 
 ---
+
+**Traducción oficial por:** [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)
 
 Hecho con ❤️ por la comunidad de Star Citizen España
 
