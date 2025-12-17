@@ -397,10 +397,7 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 ## 🔗 Enlaces Útiles
 
-- [Star Citizen Official](https://robertsspaceindustries.com/)
-- [Comunidad Star Citizen España](https://discord.gg/starcitizenes)
-- [Reportar Bug del Juego](https://issue-council.robertsspaceindustries.com/)
-- [Guías y Tutoriales](https://starcitizen.tools/)
+- [Thord82 en GitHub](https://github.com/Thord82/Star_citizen_ES)
 
 ---
 
