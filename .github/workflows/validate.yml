@@ -7,11 +7,11 @@ on:
   push:
     branches:
       - main
-      - dev
+      - master
     paths:
       - '**.bat'
-  workflow_dispatch:
-    
+  workflow_dispatch:  # Permite ejecución manual
+
 jobs:
   validate-bat-files:
     runs-on: windows-latest
@@ -244,5 +244,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
-
             });
