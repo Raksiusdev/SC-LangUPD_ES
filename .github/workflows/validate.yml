@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - main
-      - master
+      - dev
     paths:
       - '**.bat'
   workflow_dispatch:
@@ -244,4 +244,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
+
             });
