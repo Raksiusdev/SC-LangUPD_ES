@@ -12,6 +12,8 @@ on:
     paths:
       - '**.bat'
       - '**.xml'
+  workflow_dispatch:  # Permite ejecución manual
+
 
 jobs:
   security-scan:

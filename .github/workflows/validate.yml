@@ -10,7 +10,8 @@ on:
       - master
     paths:
       - '**.bat'
-
+  workflow_dispatch:
+    
 jobs:
   validate-bat-files:
     runs-on: windows-latest
