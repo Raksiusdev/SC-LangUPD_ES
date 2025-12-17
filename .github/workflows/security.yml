@@ -1,0 +1,303 @@
+name: Análisis de Seguridad
+
+on:
+  pull_request:
+    paths:
+      - '**.bat'
+      - '**.xml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '**.bat'
+      - '**.xml'
+  workflow_dispatch:  # Permite ejecución manual
+
+
+jobs:
+  security-scan:
+    runs-on: windows-latest
+    name: Escaneo de seguridad
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Análisis de seguridad en scripts
+        shell: powershell
+        run: |
+          Write-Host "=== ANÁLISIS DE SEGURIDAD ===" -ForegroundColor Cyan
+          
+          $securityIssues = @()
+          $warnings = @()
+          
+          # Buscar todos los archivos .bat
+          $batFiles = Get-ChildItem -Path . -Filter "*.bat" -Recurse
+          
+          foreach ($file in $batFiles) {
+            Write-Host "`nAnalizando: $($file.Name)" -ForegroundColor Yellow
+            $content = Get-Content $file.FullName -Raw
+            
+            # Patrones de seguridad a verificar
+            $securityPatterns = @{
+              'eval|invoke-expression' = 'Ejecución dinámica de código'
+              'download.*\.exe|wget.*\.exe|curl.*\.exe' = 'Descarga de ejecutables'
+              'reg\s+add|reg\s+delete' = 'Modificación del registro sin validación'
+              'schtasks.*\/create.*\/ru\s+system' = 'Creación de tareas como SYSTEM'
+              'net\s+user.*\/add|net\s+localgroup.*administrators.*\/add' = 'Modificación de usuarios/grupos'
+              'powershell.*-encodedcommand' = 'Comando PowerShell codificado'
+              'start\s+/b.*\.exe|call.*\.exe' = 'Ejecución de ejecutables externos'
+              '\$env:temp.*\.exe|\%temp\%.*\.exe' = 'Ejecutables en carpeta temporal'
+            }
+            
+            foreach ($pattern in $securityPatterns.Keys) {
+              if ($content -match $pattern) {
+                $issue = @{
+                  File = $file.Name
+                  Pattern = $pattern
+                  Description = $securityPatterns[$pattern]
+                  Severity = 'HIGH'
+                }
+                $securityIssues += $issue
+                Write-Host "  ❌ CRÍTICO: $($securityPatterns[$pattern])" -ForegroundColor Red
+              }
+            }
+            
+            # Patrones de advertencia (menos críticos)
+            $warningPatterns = @{
+              'del\s+/f\s+/q|rd\s+/s\s+/q' = 'Eliminación forzada de archivos/carpetas'
+              'copy\s+/y|xcopy\s+/y' = 'Sobrescritura de archivos sin confirmación'
+              'goto\s+:\w+.*goto\s+:\w+' = 'Múltiples GOTOs (posible lógica compleja)'
+              'if\s+errorlevel.*goto' = 'Manejo de errores con GOTO'
+              'echo\s+off' = 'Supresión de salida (dificulta debugging)'
+            }
+            
+            foreach ($pattern in $warningPatterns.Keys) {
+              if ($content -match $pattern) {
+                $warning = @{
+                  File = $file.Name
+                  Pattern = $pattern
+                  Description = $warningPatterns[$pattern]
+                  Severity = 'MEDIUM'
+                }
+                $warnings += $warning
+                Write-Host "  ⚠️  ADVERTENCIA: $($warningPatterns[$pattern])" -ForegroundColor Yellow
+              }
+            }
+            
+            # Verificar mejores prácticas
+            if ($content -notmatch '@echo off') {
+              Write-Host "  ℹ️  INFO: Considerar usar @echo off al inicio" -ForegroundColor Cyan
+            }
+            
+            if ($content -notmatch 'setlocal') {
+              Write-Host "  ℹ️  INFO: Considerar usar SETLOCAL para aislar variables" -ForegroundColor Cyan
+            }
+            
+            if ($content -match 'pause') {
+              Write-Host "  ℹ️  INFO: PAUSE detectado - puede no ser deseado en ejecución automática" -ForegroundColor Cyan
+            }
+          }
+          
+          # Guardar resultados
+          $results = @{
+            SecurityIssues = $securityIssues
+            Warnings = $warnings
+            FilesScanned = $batFiles.Count
+          }
+          
+          $results | ConvertTo-Json -Depth 10 | Out-File -FilePath security_report.json
+          
+          # Resumen
+          Write-Host "`n========================================" -ForegroundColor Cyan
+          Write-Host "RESUMEN DEL ANÁLISIS DE SEGURIDAD" -ForegroundColor Cyan
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "Archivos analizados: $($batFiles.Count)" -ForegroundColor White
+          Write-Host "Problemas críticos: $($securityIssues.Count)" -ForegroundColor $(if($securityIssues.Count -gt 0){'Red'}else{'Green'})
+          Write-Host "Advertencias: $($warnings.Count)" -ForegroundColor $(if($warnings.Count -gt 0){'Yellow'}else{'Green'})
+          
+          if ($securityIssues.Count -gt 0) {
+            Write-Host "`n❌ FALLÓ: Se encontraron problemas de seguridad críticos" -ForegroundColor Red
+            exit 1
+          }
+
+      - name: Verificar URLs en scripts
+        shell: powershell
+        run: |
+          Write-Host "`n=== VERIFICACIÓN DE URLs ===" -ForegroundColor Cyan
+          
+          $batFiles = Get-ChildItem -Path . -Filter "*.bat" -Recurse
+          $suspiciousUrls = @()
+          
+          foreach ($file in $batFiles) {
+            $content = Get-Content $file.FullName -Raw
+            
+            # Extraer URLs
+            $urlPattern = 'https?://[^\s<>"{}|\\^`\[\]]+'
+            $urls = [regex]::Matches($content, $urlPattern) | ForEach-Object { $_.Value }
+            
+            foreach ($url in $urls) {
+              Write-Host "  Verificando: $url" -ForegroundColor Gray
+              
+              # Lista blanca de dominios conocidos
+              $trustedDomains = @(
+                'github.com',
+                'api.github.com',
+                'raw.githubusercontent.com',
+                'robertsspaceindustries.com'
+              )
+              
+              $isTrusted = $false
+              foreach ($domain in $trustedDomains) {
+                if ($url -like "*$domain*") {
+                  $isTrusted = $true
+                  Write-Host "    ✅ Dominio confiable" -ForegroundColor Green
+                  break
+                }
+              }
+              
+              if (-not $isTrusted) {
+                Write-Host "    ⚠️  Dominio no verificado" -ForegroundColor Yellow
+                $suspiciousUrls += @{
+                  File = $file.Name
+                  URL = $url
+                }
+              }
+            }
+          }
+          
+          if ($suspiciousUrls.Count -gt 0) {
+            Write-Host "`n⚠️  URLs no verificadas encontradas:" -ForegroundColor Yellow
+            $suspiciousUrls | ForEach-Object {
+              Write-Host "  - $($_.File): $($_.URL)" -ForegroundColor Yellow
+            }
+          }
+
+      - name: Analizar archivos XML
+        shell: powershell
+        run: |
+          Write-Host "`n=== ANÁLISIS DE ARCHIVOS XML ===" -ForegroundColor Cyan
+          
+          $xmlFiles = Get-ChildItem -Path . -Filter "*.xml" -Recurse
+          
+          foreach ($file in $xmlFiles) {
+            Write-Host "`nAnalizando: $($file.Name)" -ForegroundColor Yellow
+            
+            try {
+              [xml]$xml = Get-Content $file.FullName
+              Write-Host "  ✅ XML bien formado" -ForegroundColor Green
+              
+              # Verificar configuración de tareas programadas
+              if ($xml.Task) {
+                $task = $xml.Task
+                
+                # Verificar privilegios
+                if ($task.Principals.Principal.RunLevel -eq "HighestAvailable") {
+                  Write-Host "  ⚠️  Tarea configurada con privilegios elevados" -ForegroundColor Yellow
+                }
+                
+                # Verificar rutas en acciones
+                if ($task.Actions.Exec.Command) {
+                  $command = $task.Actions.Exec.Command
+                  Write-Host "  Comando configurado: $command" -ForegroundColor Gray
+                  
+                  if ($command -match '%\w+%') {
+                    Write-Host "    ✅ Usa variables de entorno" -ForegroundColor Green
+                  }
+                  
+                  if ($command -match '^[A-Z]:\\') {
+                    Write-Host "    ⚠️  Usa ruta absoluta" -ForegroundColor Yellow
+                  }
+                }
+              }
+              
+            } catch {
+              Write-Host "  ❌ ERROR: XML malformado - $_" -ForegroundColor Red
+              exit 1
+            }
+          }
+
+      - name: Generar badge de seguridad
+        if: always()
+        shell: powershell
+        run: |
+          $results = Get-Content security_report.json | ConvertFrom-Json
+          
+          $badge = if ($results.SecurityIssues.Count -eq 0) {
+            "passing"
+          } else {
+            "failing"
+          }
+          
+          $color = if ($badge -eq "passing") { "success" } else { "critical" }
+          
+          Write-Host "Badge status: $badge" -ForegroundColor $(if($badge -eq "passing"){'Green'}else{'Red'})
+          "SECURITY_STATUS=$badge" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Comentar resultados en PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let results = { SecurityIssues: [], Warnings: [], FilesScanned: 0 };
+            if (fs.existsSync('security_report.json')) {
+              results = JSON.parse(fs.readFileSync('security_report.json', 'utf8'));
+            }
+            
+            const criticalCount = results.SecurityIssues.length;
+            const warningCount = results.Warnings.length;
+            
+            const statusEmoji = criticalCount === 0 ? '✅' : '❌';
+            const statusText = criticalCount === 0 ? 'APROBADO' : 'BLOQUEADO';
+            
+            let issuesTable = '';
+            if (criticalCount > 0) {
+              issuesTable = '\n### ❌ Problemas Críticos Encontrados\n\n';
+              issuesTable += '| Archivo | Problema | Descripción |\n';
+              issuesTable += '|---------|----------|-------------|\n';
+              results.SecurityIssues.forEach(issue => {
+                issuesTable += `| \`${issue.File}\` | ${issue.Pattern} | ${issue.Description} |\n`;
+              });
+            }
+            
+            let warningsTable = '';
+            if (warningCount > 0) {
+              warningsTable = '\n### ⚠️ Advertencias\n\n';
+              warningsTable += '| Archivo | Patrón | Descripción |\n';
+              warningsTable += '|---------|--------|-------------|\n';
+              results.Warnings.forEach(warn => {
+                warningsTable += `| \`${warn.File}\` | ${warn.Pattern} | ${warn.Description} |\n`;
+              });
+            }
+            
+            const comment = `## 🔒 Análisis de Seguridad ${statusEmoji}
+            
+            **Estado:** ${statusText}
+            
+            **Resumen:**
+            - 📁 Archivos analizados: ${results.FilesScanned}
+            - 🔴 Problemas críticos: ${criticalCount}
+            - 🟡 Advertencias: ${warningCount}
+            
+            ${issuesTable}
+            ${warningsTable}
+            
+            ---
+            
+            ${criticalCount === 0 ? 
+              '✅ **No se detectaron problemas de seguridad críticos.** El código ha pasado todas las validaciones de seguridad.' : 
+              '❌ **Este PR está bloqueado debido a problemas de seguridad.** Por favor, revisa y corrige los problemas antes de hacer merge.'}`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
