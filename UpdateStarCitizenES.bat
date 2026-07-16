@@ -7,9 +7,8 @@ REM === CONFIGURACIÓN ===
 set "GITHUB_OWNER=Thord82"
 set "GITHUB_REPO=Star_citizen_ES"
 set "ZIP_NAME=Star_citizen_ES.zip"
-set "RELEASE_FILE=%USERPROFILE%\%GITHUB_REPO%_last_release.txt"
+set "STATE_FILE=%USERPROFILE%\%GITHUB_REPO%_state.txt"
 set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%_update_log.txt"
-set "CONFIG_FILE=%USERPROFILE%\%GITHUB_REPO%_install_path.txt"
 set "LOG_MAX_LINES=500"
 
 REM === Modo interactivo: solo lo pasa el instalador en su primera ejecución ===
@@ -26,6 +25,18 @@ echo ========================================>> "%LOG_FILE%"
 echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
 echo ========================================>> "%LOG_FILE%"
 
+REM === Cargar estado guardado (release instalada, instalacion elegida, hash del zip) ===
+set "LOCAL_RELEASE=none"
+set "SAVED_PATH="
+set "SAVED_HASH="
+if exist "%STATE_FILE%" (
+    for /f "usebackq tokens=1,2 delims==" %%k in ("%STATE_FILE%") do (
+        if /I "%%k"=="RELEASE" set "LOCAL_RELEASE=%%l"
+        if /I "%%k"=="INSTALL_PATH" set "SAVED_PATH=%%l"
+        if /I "%%k"=="ZIP_SHA256" set "SAVED_HASH=%%l"
+    )
+)
+
 REM === Buscar TODAS las instalaciones de Star Citizen en TODOS los discos ===
 set "FOUND_COUNT=0"
 call :log INFO "Buscando instalaciones de Star Citizen en todos los discos..."
@@ -35,8 +46,7 @@ call :log INFO "Instalaciones encontradas: %FOUND_COUNT%"
 REM === Elegir instalación destino ===
 set "DEST_DIR="
 
-if not exist "%CONFIG_FILE%" goto :no_saved_path
-for /f "usebackq tokens=*" %%c in ("%CONFIG_FILE%") do set "SAVED_PATH=%%c"
+if not defined SAVED_PATH goto :no_saved_path
 if not exist "%SAVED_PATH%\LIVE" goto :saved_invalid
 set "DEST_DIR=%SAVED_PATH%"
 call :log INFO "Usando instalacion guardada: %DEST_DIR%"
@@ -58,7 +68,7 @@ goto :after_detect
 :single_install_found
 set "DEST_DIR=%FOUNDPATH_1%"
 call :log OK "Instalacion unica encontrada, seleccionada automaticamente: %DEST_DIR%"
-> "%CONFIG_FILE%" echo %DEST_DIR%
+call :save_state "%LOCAL_RELEASE%" "%DEST_DIR%" "%SAVED_HASH%"
 goto :after_detect
 
 :multiple_installs_found
@@ -76,7 +86,7 @@ echo Opcion invalida, se usara la instalacion 1.
 set "PICKED=%FOUNDPATH_1%"
 :choice_valid
 set "DEST_DIR=%PICKED%"
-> "%CONFIG_FILE%" echo %DEST_DIR%
+call :save_state "%LOCAL_RELEASE%" "%DEST_DIR%" "%SAVED_HASH%"
 echo Instalacion seleccionada: %DEST_DIR%
 call :log OK "Instalacion elegida por el usuario: %DEST_DIR%"
 goto :after_detect
@@ -128,14 +138,7 @@ if exist "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)\global.ini" (
     call :log WARN "Archivos de traduccion NO encontrados en el juego"
 )
 
-REM === Leer release local ===
-set "LOCAL_RELEASE=none"
-if exist "%RELEASE_FILE%" (
-    for /f "usebackq tokens=*" %%b in ("%RELEASE_FILE%") do set "LOCAL_RELEASE=%%b"
-    call :log INFO "Release local guardada: !LOCAL_RELEASE!"
-) else (
-    call :log INFO "No hay registro de version instalada"
-)
+call :log INFO "Release local guardada: %LOCAL_RELEASE%"
 
 REM === Decidir si actualizar ===
 set "NEED_UPDATE=0"
@@ -148,7 +151,7 @@ if "!FILES_EXIST!"=="0" (
 )
 
 REM Caso 2: Versión diferente
-if /I not "%LAST_RELEASE%"=="!LOCAL_RELEASE!" (
+if /I not "%LAST_RELEASE%"=="%LOCAL_RELEASE%" (
     call :log INFO "RAZON: Nueva version disponible (%LAST_RELEASE%)"
     set "NEED_UPDATE=1"
     goto :do_update
@@ -185,11 +188,41 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+REM === Verificar que el ZIP no este vacio o incompleto ===
+set "ZIP_SIZE=0"
+for %%s in ("%ZIP_FILE%") do set "ZIP_SIZE=%%~zs"
+if %ZIP_SIZE% LSS 1024 (
+    call :log ERROR "El ZIP descargado parece vacio o incompleto (%ZIP_SIZE% bytes)"
+    rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
+    exit /b 1
+)
+
+REM === Calcular hash del ZIP (Thord82 no publica checksum oficial, se usa
+REM     para detectar descargas corruptas y para trazabilidad en soporte) ===
+set "ZIP_SHA256="
+for /f "usebackq delims=" %%h in (`powershell -NoProfile -Command "[BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.IO.File]::ReadAllBytes('%ZIP_FILE%'))) -replace '-',''"`) do set "ZIP_SHA256=%%h"
+if not defined ZIP_SHA256 (
+    call :log ERROR "No se pudo calcular el hash del ZIP descargado"
+    rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
+    exit /b 1
+)
+call :log INFO "SHA256 del ZIP: %ZIP_SHA256%"
+
 REM === Expandir ZIP ===
 call :log INFO "Extrayendo archivos..."
 powershell -NoProfile -Command "try { Expand-Archive -Force '%ZIP_FILE%' '%TEMP_DIR%\extracted' } catch { exit 1 }"
 if %ERRORLEVEL% neq 0 (
     call :log ERROR "Fallo al expandir el archivo"
+    rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
+    exit /b 1
+)
+
+REM === Verificar que el ZIP realmente contiene la traducción antes de instalarla ===
+if not exist "%TEMP_DIR%\extracted\LIVE\data\Localization\spanish_(spain)\global.ini" (
+    call :log ERROR "El ZIP extraido no contiene global.ini, se aborta sin tocar la instalacion"
     rd /s /q "%TEMP_DIR%"
     echo ======================================== >> "%LOG_FILE%"
     exit /b 1
@@ -205,8 +238,8 @@ REM === Copiar archivos ===
 call :log INFO "Instalando traduccion en el juego..."
 xcopy "%TEMP_DIR%\extracted\*" "%DEST_DIR%\" /E /Y /I /Q >nul
 
-REM === Guardar nueva release ===
-echo %LAST_RELEASE%> "%RELEASE_FILE%"
+REM === Guardar nuevo estado ===
+call :save_state "%LAST_RELEASE%" "%DEST_DIR%" "%ZIP_SHA256%"
 call :log OK "Version instalada: %LAST_RELEASE%"
 
 REM === Limpieza ===
@@ -239,6 +272,15 @@ REM Imprime "  N) ruta" para el menú interactivo
 :print_option
 call set "VAL=%%FOUNDPATH_%~1%%"
 echo   %~1^) %VAL%
+goto :eof
+
+REM Guarda el estado: %1=release instalada %2=ruta elegida %3=hash del zip
+:save_state
+(
+    echo RELEASE=%~1
+    echo INSTALL_PATH=%~2
+    echo ZIP_SHA256=%~3
+) > "%STATE_FILE%"
 goto :eof
 
 :log

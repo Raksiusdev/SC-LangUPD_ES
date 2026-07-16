@@ -106,8 +106,7 @@ Instalando archivos...
 |-----------------|-----------|-------------|
 | `UpdateStarCitizenES.bat` | `C:\Scripts\` | Script de actualización |
 | `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones (se purga a las últimas 500 líneas en cada ejecución) |
-| `Star_citizen_ES_last_release.txt` | `%USERPROFILE%\` | Versión instalada |
-| `Star_citizen_ES_install_path.txt` | `%USERPROFILE%\` | Instalación de Star Citizen elegida (si hay más de una) |
+| `Star_citizen_ES_state.txt` | `%USERPROFILE%\` | Estado: versión instalada, instalación elegida (si hay más de una) y hash SHA256 del último ZIP instalado |
 | Tarea programada | Programador de Tareas | `UpdateStarCitizenES` |
 
 ---
@@ -129,10 +128,14 @@ El script busca **automáticamente** en todos los discos (C: a Z:) en estas ubic
 
 El script busca en **todos** los discos y detecta **todas** las instalaciones que encuentre, no se queda con la primera. Si detecta más de una:
 
-- Durante la **instalación** (`InstalarAutoUpdate.bat`), te mostrará la lista y te dejará elegir cuál usar. Esa elección se guarda en `Star_citizen_ES_install_path.txt`.
+- Durante la **instalación** (`InstalarAutoUpdate.bat`), te mostrará la lista y te dejará elegir cuál usar. Esa elección se guarda en `Star_citizen_ES_state.txt` (clave `INSTALL_PATH`).
 - Las **actualizaciones automáticas** posteriores (al iniciar sesión) usan siempre esa instalación guardada, sin volver a preguntar.
 - Si no has elegido ninguna todavía y el script se ejecuta en segundo plano (por ejemplo, la primera vez que detecta dos instalaciones sin haber pasado por el instalador), usa la primera que encuentre y lo indica en el log — vuelve a ejecutar `InstalarAutoUpdate.bat` para elegir otra.
-- Si quieres cambiar de instalación más adelante, borra `%USERPROFILE%\Star_citizen_ES_install_path.txt` y vuelve a ejecutar el instalador.
+- Si quieres cambiar de instalación más adelante, borra `%USERPROFILE%\Star_citizen_ES_state.txt` y vuelve a ejecutar el instalador.
+
+### Verificación del ZIP descargado
+
+Antes de instalar, el script comprueba que el ZIP descargado no esté vacío o incompleto, calcula su hash SHA256 (se guarda en `Star_citizen_ES_state.txt` y se registra en el log, útil para soporte) y verifica que el contenido extraído realmente incluya `global.ini` antes de copiar nada sobre la instalación del juego. Si algo de esto falla, se aborta sin tocar la traducción existente. Nota: Thord82 no publica un checksum oficial en sus releases, así que esto detecta descargas corruptas/incompletas, pero no puede verificar la autenticidad del contenido contra una fuente externa.
 
 ---
 
@@ -248,7 +251,7 @@ graph TD
 El sistema usa **releases de GitHub** para determinar si hay actualizaciones:
 
 1. Consulta la API de GitHub: `https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest`
-2. Compara con la versión local guardada en `Star_citizen_ES_last_release.txt`
+2. Compara con la versión local guardada en `Star_citizen_ES_state.txt` (clave `RELEASE`)
 3. Si son diferentes → descarga e instala
 4. Si son iguales → termina sin hacer nada
 
