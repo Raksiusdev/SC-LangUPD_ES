@@ -108,7 +108,7 @@ if %errorLevel% equ 0 (
 )
 
 REM Ejecutar comando para establecer los scrips como confiables
-Get-ChildItem "C:\Scripts" -Recurse | Unblock-File
+powershell -NoProfile -Command "Get-ChildItem 'C:\Scripts' -Recurse | Unblock-File"
 
 echo.
 echo ================================================
