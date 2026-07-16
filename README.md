@@ -105,7 +105,7 @@ Instalando archivos...
 | Archivo/Carpeta | Ubicación | Descripción |
 |-----------------|-----------|-------------|
 | `UpdateStarCitizenES.bat` | `C:\Scripts\` | Script de actualización |
-| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones |
+| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones (se purga a las últimas 500 líneas en cada ejecución) |
 | `Star_citizen_ES_last_release.txt` | `%USERPROFILE%\` | Versión instalada |
 | Tarea programada | Programador de Tareas | `UpdateStarCitizenES` |
 
@@ -141,21 +141,24 @@ notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
 ========================================
 Inicio: 17/12/2025 15:30:45
 ========================================
-Buscando Star Citizen en todos los discos...
-Comprobando disco C:
-Comprobando disco D:
-ENCONTRADO en D:\StarCitizen
-Ruta detectada correctamente
-Destino: "D:\StarCitizen"
-Última release remota: 3.24.3
-Primera instalación
-Nueva actualización detectada (3.24.3)
-Descargando actualización...
-Extrayendo archivos...
-Instalando traducción...
-Actualización completada: 3.24.3
+[15:30:45,12] [INFO] Buscando Star Citizen en todos los discos...
+[15:30:45,15] [INFO] Comprobando disco C:
+[15:30:45,17] [INFO] Comprobando disco D:
+[15:30:45,20] [OK] Encontrado en D:\StarCitizen
+[15:30:45,21] [OK] Ruta detectada correctamente
+[15:30:45,22] [INFO] Destino: D:\StarCitizen
+[15:30:45,90] [INFO] Ultima release remota: 3.24.3
+[15:30:45,91] [INFO] No hay registro de version instalada
+[15:30:45,92] [INFO] RAZON: Nueva version disponible (3.24.3)
+[15:30:45,95] [INFO] Descargando Star_citizen_ES.zip...
+[15:30:47,10] [INFO] Extrayendo archivos...
+[15:30:47,50] [INFO] Instalando traduccion en el juego...
+[15:30:47,60] [OK] Version instalada: 3.24.3
+[15:30:47,61] [OK] Actualizacion completada exitosamente
 ========================================
 ```
+
+Cada línea sigue el formato `[hora] [NIVEL] mensaje`, con niveles `INFO`, `OK`, `WARN` o `ERROR`. El log es un único archivo que se purga automáticamente a las últimas 500 líneas en cada ejecución, así que nunca crece sin límite.
 
 ### Ejecutar Manualmente
 
@@ -313,7 +316,7 @@ Simplemente vuelve a ejecutar el instalador. Recreará todo desde cero.
 ```batch
 if exist "X:\TuRuta\StarCitizen\LIVE" (
     set "DEST_DIR=X:\TuRuta\StarCitizen"
-    echo ENCONTRADO en X:\TuRuta >> "%LOG_FILE%"
+    call :log OK "Encontrado en X:\TuRuta"
     goto :found
 )
 ```
@@ -355,8 +358,8 @@ notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
 ```
 
 **Errores comunes:**
-- `ERROR: Falló la descarga` → Verifica conexión a internet y espacio en disco
-- `ERROR: Falló al expandir` → El ZIP puede estar corrupto, intenta de nuevo
+- `[ERROR] Fallo la descarga` → Verifica conexión a internet y espacio en disco
+- `[ERROR] Fallo al expandir el archivo` → El ZIP puede estar corrupto, intenta de nuevo
 
 ---
 
