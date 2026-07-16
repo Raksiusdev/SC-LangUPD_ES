@@ -127,8 +127,11 @@ echo.
 
 pause
 
-REM Ejecutar la tarea
-schtasks /run /tn "UpdateStarCitizenES"
+REM Ejecutar la primera actualizacion de forma interactiva (visible en esta
+REM consola) para poder elegir instalacion si se detecta mas de una. Las
+REM siguientes ejecuciones, disparadas por la tarea programada, seran
+REM silenciosas y usaran la instalacion guardada en esta primera pasada.
+call "%SCRIPT_PATH1%" /interactive
 
 echo.
 echo ==================================================

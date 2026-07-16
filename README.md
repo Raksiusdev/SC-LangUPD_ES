@@ -107,6 +107,7 @@ Instalando archivos...
 | `UpdateStarCitizenES.bat` | `C:\Scripts\` | Script de actualización |
 | `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones (se purga a las últimas 500 líneas en cada ejecución) |
 | `Star_citizen_ES_last_release.txt` | `%USERPROFILE%\` | Versión instalada |
+| `Star_citizen_ES_install_path.txt` | `%USERPROFILE%\` | Instalación de Star Citizen elegida (si hay más de una) |
 | Tarea programada | Programador de Tareas | `UpdateStarCitizenES` |
 
 ---
@@ -123,6 +124,15 @@ El script busca **automáticamente** en todos los discos (C: a Z:) en estas ubic
 ```
 
 **No necesitas configurar nada** - el script detecta la instalación automáticamente.
+
+### ¿Tienes el juego instalado más de una vez?
+
+El script busca en **todos** los discos y detecta **todas** las instalaciones que encuentre, no se queda con la primera. Si detecta más de una:
+
+- Durante la **instalación** (`InstalarAutoUpdate.bat`), te mostrará la lista y te dejará elegir cuál usar. Esa elección se guarda en `Star_citizen_ES_install_path.txt`.
+- Las **actualizaciones automáticas** posteriores (al iniciar sesión) usan siempre esa instalación guardada, sin volver a preguntar.
+- Si no has elegido ninguna todavía y el script se ejecuta en segundo plano (por ejemplo, la primera vez que detecta dos instalaciones sin haber pasado por el instalador), usa la primera que encuentre y lo indica en el log — vuelve a ejecutar `InstalarAutoUpdate.bat` para elegir otra.
+- Si quieres cambiar de instalación más adelante, borra `%USERPROFILE%\Star_citizen_ES_install_path.txt` y vuelve a ejecutar el instalador.
 
 ---
 

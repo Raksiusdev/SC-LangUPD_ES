@@ -9,7 +9,12 @@ set "GITHUB_REPO=Star_citizen_ES"
 set "ZIP_NAME=Star_citizen_ES.zip"
 set "RELEASE_FILE=%USERPROFILE%\%GITHUB_REPO%_last_release.txt"
 set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%_update_log.txt"
+set "CONFIG_FILE=%USERPROFILE%\%GITHUB_REPO%_install_path.txt"
 set "LOG_MAX_LINES=500"
+
+REM === Modo interactivo: solo lo pasa el instalador en su primera ejecución ===
+set "INTERACTIVE=0"
+if /I "%~1"=="/interactive" set "INTERACTIVE=1"
 
 REM === Purgar log si supera el máximo de líneas (un único archivo, sin rotación) ===
 if exist "%LOG_FILE%" (
@@ -21,41 +26,67 @@ echo ========================================>> "%LOG_FILE%"
 echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
 echo ========================================>> "%LOG_FILE%"
 
-REM === Buscar ruta de instalación de Star Citizen en TODOS los discos ===
+REM === Buscar TODAS las instalaciones de Star Citizen en TODOS los discos ===
+set "FOUND_COUNT=0"
+call :log INFO "Buscando instalaciones de Star Citizen en todos los discos..."
+for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do call :check_drive %%d
+call :log INFO "Instalaciones encontradas: %FOUND_COUNT%"
+
+REM === Elegir instalación destino ===
 set "DEST_DIR="
-call :log INFO "Buscando Star Citizen en todos los discos..."
-for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-    if exist "%%d:\" (
-        call :log INFO "Comprobando disco %%d:"
-        if exist "%%d:\Program Files\Roberts Space Industries\StarCitizen\LIVE" (
-            set "DEST_DIR=%%d:\Program Files\Roberts Space Industries\StarCitizen"
-            call :log OK "Encontrado en %%d:\Program Files"
-            goto :found
-        )
-        if exist "%%d:\StarCitizen\LIVE" (
-            set "DEST_DIR=%%d:\StarCitizen"
-            call :log OK "Encontrado en %%d:\StarCitizen"
-            goto :found
-        )
-        if exist "%%d:\Roberts Space Industries\StarCitizen\LIVE" (
-            set "DEST_DIR=%%d:\Roberts Space Industries\StarCitizen"
-            call :log OK "Encontrado en %%d:\Roberts Space Industries"
-            goto :found
-        )
-        if exist "%%d:\Games\StarCitizen\LIVE" (
-            set "DEST_DIR=%%d:\Games\StarCitizen"
-            call :log OK "Encontrado en %%d:\Games"
-            goto :found
-        )
-    )
-)
-:found
-if not defined DEST_DIR (
-    set "DEST_DIR=C:\StarCitizen"
-    call :log WARN "No se encontro Star Citizen, usando ruta por defecto"
-) else (
-    call :log OK "Ruta detectada correctamente"
-)
+
+if not exist "%CONFIG_FILE%" goto :no_saved_path
+for /f "usebackq tokens=*" %%c in ("%CONFIG_FILE%") do set "SAVED_PATH=%%c"
+if not exist "%SAVED_PATH%\LIVE" goto :saved_invalid
+set "DEST_DIR=%SAVED_PATH%"
+call :log INFO "Usando instalacion guardada: %DEST_DIR%"
+goto :after_detect
+
+:saved_invalid
+call :log WARN "La instalacion guardada ya no existe, se repite la deteccion"
+
+:no_saved_path
+if %FOUND_COUNT% EQU 0 goto :no_installs_found
+if %FOUND_COUNT% EQU 1 goto :single_install_found
+goto :multiple_installs_found
+
+:no_installs_found
+set "DEST_DIR=C:\StarCitizen"
+call :log WARN "No se encontro Star Citizen, usando ruta por defecto"
+goto :after_detect
+
+:single_install_found
+set "DEST_DIR=%FOUNDPATH_1%"
+call :log OK "Instalacion unica encontrada, seleccionada automaticamente: %DEST_DIR%"
+> "%CONFIG_FILE%" echo %DEST_DIR%
+goto :after_detect
+
+:multiple_installs_found
+if not "%INTERACTIVE%"=="1" goto :multiple_silent
+echo.
+echo Se han detectado %FOUND_COUNT% instalaciones de Star Citizen:
+for /l %%i in (1,1,%FOUND_COUNT%) do call :print_option %%i
+echo.
+set "CHOICE="
+set /p "CHOICE=Elige el numero de instalacion a usar (por defecto 1): "
+if "%CHOICE%"=="" set "CHOICE=1"
+call set "PICKED=%%FOUNDPATH_%CHOICE%%%"
+if defined PICKED goto :choice_valid
+echo Opcion invalida, se usara la instalacion 1.
+set "PICKED=%FOUNDPATH_1%"
+:choice_valid
+set "DEST_DIR=%PICKED%"
+> "%CONFIG_FILE%" echo %DEST_DIR%
+echo Instalacion seleccionada: %DEST_DIR%
+call :log OK "Instalacion elegida por el usuario: %DEST_DIR%"
+goto :after_detect
+
+:multiple_silent
+set "DEST_DIR=%FOUNDPATH_1%"
+call :log WARN "Multiples instalaciones detectadas (%FOUND_COUNT%), usando la primera: %DEST_DIR%. Ejecuta InstalarAutoUpdate.bat de nuevo para elegir otra."
+goto :after_detect
+
+:after_detect
 call :log INFO "Destino: %DEST_DIR%"
 
 REM === Verificar conexión a internet ===
@@ -187,6 +218,29 @@ exit /b 0
 REM ========================================
 REM Subrutinas
 REM ========================================
+
+REM Comprueba las rutas conocidas de Star Citizen en el disco %1
+:check_drive
+if not exist "%~1:\" goto :eof
+if exist "%~1:\Program Files\Roberts Space Industries\StarCitizen\LIVE" call :add_found "%~1:\Program Files\Roberts Space Industries\StarCitizen"
+if exist "%~1:\StarCitizen\LIVE" call :add_found "%~1:\StarCitizen"
+if exist "%~1:\Roberts Space Industries\StarCitizen\LIVE" call :add_found "%~1:\Roberts Space Industries\StarCitizen"
+if exist "%~1:\Games\StarCitizen\LIVE" call :add_found "%~1:\Games\StarCitizen"
+goto :eof
+
+REM Registra una instalación encontrada como FOUNDPATH_<n>
+:add_found
+set /a FOUND_COUNT+=1
+set "FOUNDPATH_%FOUND_COUNT%=%~1"
+call :log OK "Instalacion %FOUND_COUNT% encontrada: %~1"
+goto :eof
+
+REM Imprime "  N) ruta" para el menú interactivo
+:print_option
+call set "VAL=%%FOUNDPATH_%~1%%"
+echo   %~1^) %VAL%
+goto :eof
+
 :log
 echo [%TIME%] [%~1] %~2>> "%LOG_FILE%"
 goto :eof
