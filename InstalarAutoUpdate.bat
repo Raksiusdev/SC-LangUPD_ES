@@ -99,12 +99,23 @@ if %errorLevel% equ 0 (
     schtasks /delete /tn "UpdateStarCitizenES" /f >nul 2>&1
 )
 
-schtasks /create /tn "UpdateStarCitizenES" /tr "wscript.exe \"%SCRIPT_PATH2%\"" /sc onlogon /ru "%USERNAME%" /rl highest /f >nul 2>&1
+set "TASK_ERROR="
+for /f "usebackq delims=" %%e in (`schtasks /create /tn "UpdateStarCitizenES" /tr "wscript.exe \"%SCRIPT_PATH2%\"" /sc onlogon /ru "%USERNAME%" /rl highest /f 2^>^&1 1^>nul`) do set "TASK_ERROR=%%e"
 
-if %errorLevel% equ 0 (
-    echo [OK] Tarea programada creada
+REM No basta con el errorlevel del create: confirmamos que la tarea
+REM realmente quedo registrada antes de darla por buena.
+schtasks /query /tn "UpdateStarCitizenES" >nul 2>&1
+set "TASK_OK=%errorLevel%"
+
+if "%TASK_OK%"=="0" (
+    echo [OK] Tarea programada creada y verificada
 ) else (
-    echo [WARN] Error al crear tarea (código: %errorLevel%^)
+    echo [ERROR] No se pudo crear la tarea programada
+    if defined TASK_ERROR echo         %TASK_ERROR%
+    echo.
+    echo         Sin esta tarea, la traduccion NO se actualizara sola al iniciar Windows.
+    echo         Puedes reintentarlo a mano con este comando ^(como Administrador^):
+    echo         schtasks /create /tn "UpdateStarCitizenES" /tr "wscript.exe \"%SCRIPT_PATH2%\"" /sc onlogon /rl highest /f
 )
 
 REM Ejecutar comando para establecer los scrips como confiables
@@ -112,13 +123,21 @@ powershell -NoProfile -Command "Get-ChildItem 'C:\Scripts' -Recurse | Unblock-Fi
 
 echo.
 echo ================================================
-echo             INSTALACIÓN COMPLETADA
+if "%TASK_OK%"=="0" (
+    echo             INSTALACIÓN COMPLETADA
+) else (
+    echo       INSTALACIÓN COMPLETADA CON AVISOS
+)
 echo ================================================
 echo.
 echo   Script: %SCRIPT_PATH1%
 echo   Launcher: %SCRIPT_PATH2%
 echo   Tarea: UpdateStarCitizenES
 echo   Log: %USERPROFILE%\Star_citizen_ES_update_log.txt
+if not "%TASK_OK%"=="0" (
+    echo.
+    echo   [!] La tarea programada NO quedo creada, revisa el aviso de arriba.
+)
 echo.
 echo ================================================
 echo PULSA ENTER PARA EJECUTAR PRIMERA ACTUALIZACIÓN
