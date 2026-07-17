@@ -255,6 +255,17 @@ El sistema usa **releases de GitHub** para determinar si hay actualizaciones:
 3. Si son diferentes → descarga e instala
 4. Si son iguales → termina sin hacer nada
 
+### Auto-actualización del propio script
+
+El script también se mantiene a sí mismo al día. En cada ejecución comprueba si hay una **release publicada** de este repositorio (`Raksiusdev/SC-LangUPD_ES`) más reciente que la versión instalada — a propósito no se fija en los últimos commits de `main`, solo en releases marcadas explícitamente como listas. Si hay una nueva:
+
+1. Descarga `UpdateStarCitizenES.bat` y `SC_Lang_updater.vbs` correspondientes a esa release.
+2. Verifica que el `.bat` descargado sea válido antes de aplicarlo.
+3. Aplica el reemplazo desde un proceso auxiliar independiente (nunca se sobrescribe a sí mismo mientras sigue corriendo, para evitar corromper la ejecución) y relanza el script ya actualizado.
+4. Todo el proceso queda registrado en el log (`Star_citizen_ES_update_log.txt`).
+
+Si no hay conexión o no se puede descargar la nueva versión, simplemente continúa con la versión actual sin interrumpir la actualización de la traducción.
+
 ---
 
 ## ❓ Preguntas Frecuentes

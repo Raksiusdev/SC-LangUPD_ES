@@ -11,6 +11,12 @@ set "STATE_FILE=%USERPROFILE%\%GITHUB_REPO%_state.txt"
 set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%_update_log.txt"
 set "LOG_MAX_LINES=500"
 
+REM === Auto-actualizacion del propio script (contra releases de este repo,
+REM     no commits de main, para no desplegar cambios sin marcar como listos) ===
+set "SCRIPT_VERSION=dev"
+set "SELF_OWNER=Raksiusdev"
+set "SELF_REPO=SC-LangUPD_ES"
+
 REM === Modo interactivo: solo lo pasa el instalador en su primera ejecución ===
 set "INTERACTIVE=0"
 if /I "%~1"=="/interactive" set "INTERACTIVE=1"
@@ -24,6 +30,9 @@ REM === Escribir en log ===
 echo ========================================>> "%LOG_FILE%"
 echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
 echo ========================================>> "%LOG_FILE%"
+
+REM === Comprobar si hay una nueva version del propio script publicada ===
+call :selfupdate_check
 
 REM === Cargar estado guardado (release instalada, instalacion elegida, hash del zip) ===
 set "LOCAL_RELEASE=none"
@@ -251,6 +260,85 @@ exit /b 0
 REM ========================================
 REM Subrutinas
 REM ========================================
+
+REM Comprueba si hay una release nueva del propio script y, si la hay, la
+REM descarga y aplica desde un proceso auxiliar separado. IMPORTANTE: nunca
+REM sobrescribir %~f0 y seguir ejecutando lineas de ESTE MISMO proceso -
+REM cmd.exe sigue leyendo el archivo por offset de bytes y si el contenido
+REM cambia bajo sus pies el resto de la ejecucion se corrompe (verificado).
+:selfupdate_check
+set "SELF_LATEST="
+for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$uri = 'https://api.github.com/repos/%SELF_OWNER%/%SELF_REPO%/releases/latest'; " ^
+    "$headers = @{'User-Agent' = 'StarCitizenES-Updater'; 'Accept' = 'application/vnd.github.v3+json'}; " ^
+    "try { " ^
+    "    $resp = Invoke-RestMethod -Uri $uri -Headers $headers -ErrorAction Stop; " ^
+    "    $tag = $resp.tag_name -replace '^v\.?', ''; " ^
+    "    $tag " ^
+    "} catch { " ^
+    "    'no-release-yet' " ^
+    "}"`) do set "SELF_LATEST=%%a"
+
+if not defined SELF_LATEST (
+    call :log WARN "No se pudo comprobar si hay una nueva version del script"
+    goto :eof
+)
+if "%SELF_LATEST%"=="no-release-yet" (
+    call :log INFO "No hay releases publicadas del script todavia, se omite auto-actualizacion"
+    goto :eof
+)
+if /I "%SELF_LATEST%"=="%SCRIPT_VERSION%" (
+    call :log INFO "El script ya esta actualizado (version %SCRIPT_VERSION%)"
+    goto :eof
+)
+
+call :log INFO "Nueva version del script disponible: %SELF_LATEST% (actual: %SCRIPT_VERSION%), descargando..."
+
+set "SELF_TEMP=%TEMP%\%SELF_REPO%_selfupdate"
+if exist "%SELF_TEMP%" rd /s /q "%SELF_TEMP%" >nul 2>&1
+mkdir "%SELF_TEMP%" >nul 2>&1
+
+set "SELF_URL_BAT=https://raw.githubusercontent.com/%SELF_OWNER%/%SELF_REPO%/v%SELF_LATEST%/UpdateStarCitizenES.bat"
+set "SELF_URL_VBS=https://raw.githubusercontent.com/%SELF_OWNER%/%SELF_REPO%/v%SELF_LATEST%/SC_Lang_updater.vbs"
+
+powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%SELF_URL_BAT%', '%SELF_TEMP%\UpdateStarCitizenES.bat'); exit 0 } catch { exit 1 }"
+if %ERRORLEVEL% neq 0 (
+    call :log WARN "No se pudo descargar la nueva version del script, se continua con la actual"
+    rd /s /q "%SELF_TEMP%" >nul 2>&1
+    goto :eof
+)
+
+REM Sanidad minima antes de aplicar la nueva version
+findstr /B /C:"@echo off" "%SELF_TEMP%\UpdateStarCitizenES.bat" >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    call :log WARN "La nueva version descargada no parece un .bat valido, se descarta"
+    rd /s /q "%SELF_TEMP%" >nul 2>&1
+    goto :eof
+)
+
+powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%SELF_URL_VBS%', '%SELF_TEMP%\SC_Lang_updater.vbs') } catch {}" >nul 2>&1
+
+set "RELAUNCH_ARGS="
+if "%INTERACTIVE%"=="1" set "RELAUNCH_ARGS=/interactive"
+
+call :log OK "Nueva version %SELF_LATEST% descargada y validada, se aplicara en unos segundos desde un proceso independiente"
+
+REM El helper espera a que ESTE proceso termine, copia los archivos nuevos,
+REM deja constancia en el log y relanza el script ya actualizado.
+set "APPLY_HELPER=%SELF_TEMP%\_apply_update.bat"
+(
+    echo @echo off
+    echo timeout /t 1 /nobreak ^>nul
+    echo copy /y "%SELF_TEMP%\UpdateStarCitizenES.bat" "%~f0" ^>nul
+    echo if exist "%SELF_TEMP%\SC_Lang_updater.vbs" copy /y "%SELF_TEMP%\SC_Lang_updater.vbs" "%~dp0SC_Lang_updater.vbs" ^>nul
+    echo echo [%%TIME%%] [OK] Script actualizado a la version %SELF_LATEST%, relanzando...^>^>"%LOG_FILE%"
+    echo call "%~f0" %RELAUNCH_ARGS%
+    echo rd /s /q "%SELF_TEMP%" ^>nul 2^>^&1
+    echo del "%%~f0"
+) > "%APPLY_HELPER%"
+
+start "" /min cmd /c "%APPLY_HELPER%"
+exit /b 0
 
 REM Comprueba las rutas conocidas de Star Citizen en el disco %1
 :check_drive
