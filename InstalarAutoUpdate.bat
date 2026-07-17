@@ -1,4 +1,7 @@
 @echo off
+REM Consola en UTF-8: el archivo esta guardado en UTF-8 y sin esto los
+REM acentos y la n con tilde salen mal en el codepage por defecto de cmd.
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 echo ================================================
 echo   INSTALADOR - Star Citizen ES Auto-Update

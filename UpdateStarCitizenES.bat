@@ -1,4 +1,7 @@
 @echo off
+REM Consola en UTF-8: el archivo esta guardado en UTF-8, evita mojibake si
+REM en el futuro se muestra texto con acentos/enye en pantalla o en el log.
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 REM ========================================
 REM Script de Actualización Star Citizen ES
