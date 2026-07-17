@@ -268,6 +268,25 @@ Si no hay conexión o no se puede descargar la nueva versión, simplemente conti
 
 ---
 
+## 🧑‍🔬 Cómo probar la rama `dev`
+
+Antes de que los cambios lleguen a `main` (y por tanto a los usuarios), se pueden probar en local sin publicar nada:
+
+1. Descarga `InstalarAutoUpdate.bat` desde `dev` en vez de `main`: `https://github.com/Raksiusdev/SC-LangUPD_ES/raw/dev/InstalarAutoUpdate.bat`
+2. Edita ese archivo descargado y cambia las dos líneas `GITHUB_URL1` / `GITHUB_URL2` de `/main/` a `/dev/`, para que también descargue `UpdateStarCitizenES.bat` y `SC_Lang_updater.vbs` desde `dev`.
+3. Ejecútalo como Administrador. Cuando llegue a la pantalla "PULSA ENTER PARA EJECUTAR PRIMERA ACTUALIZACIÓN", **antes de pulsar Enter**, abre `C:\Scripts\UpdateStarCitizenES.bat` y cambia `set "SCRIPT_VERSION=dev"` por el valor de la última release publicada (por ejemplo `set "SCRIPT_VERSION=0.2.0"`). Esto evita que la auto-actualización del propio script te revierta a esa release nada más arrancar, ya que solo confía en releases publicadas, no en `dev`.
+4. Pulsa Enter y sigue el flujo normal. Revisa `%USERPROFILE%\Star_citizen_ES_update_log.txt` y `%USERPROFILE%\Star_citizen_ES_state.txt` para confirmar el resultado.
+
+Esto no toca `main` ni publica nada — es solo una copia local apuntando a otra rama.
+
+---
+
+## 💡 Mejoras futuras (ideas, no implementadas)
+
+- **Soporte para otros canales del juego además de LIVE**, por ejemplo `HOTFIX`, `PTU`, `EPTU` o `TECH-PREVIEW`. Hoy el script solo busca y actualiza la carpeta `LIVE` de cada instalación detectada (ver [¿Funciona con PTU o EPTU?](#-funciona-con-ptu-o-eptu)); una carpeta de instalación de Star Citizen puede tener varios de estos canales en paralelo, cada uno con su propia subcarpeta `data\Localization\`. La idea sería detectar qué canales existen dentro de cada instalación (no solo comprobar que exista `LIVE`) y ofrecer instalar la traducción en todos los que apliquen, o dejar elegir cuáles — de forma similar a como ya se eligen instalaciones múltiples.
+
+---
+
 ## ❓ Preguntas Frecuentes
 
 ### ¿Necesito configurar algo?
