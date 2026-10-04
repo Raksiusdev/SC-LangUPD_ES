@@ -39,9 +39,10 @@ set "SCRIPT_REF=release"
 
 REM === Verificar conexión a internet ===
 echo [1/4] Verificando conexión a internet...
-ping -n 1 github.com >nul 2>&1
+REM Comprobacion TCP al puerto 443: el ping falla en redes que bloquean ICMP aunque HTTPS funcione
+powershell -NoProfile -Command "try { $c = New-Object Net.Sockets.TcpClient; if ($c.ConnectAsync('api.github.com',443).Wait(5000) -and $c.Connected) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERROR] No hay conexión a internet
+    echo [ERROR] No hay conexión con GitHub
     pause
     exit /b 1
 )

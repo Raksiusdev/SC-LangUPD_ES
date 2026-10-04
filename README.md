@@ -7,9 +7,9 @@
 ![Auto Update](https://img.shields.io/badge/Auto-Update-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-**Sistema de actualización automática para la traducción al español de Star Citizen**
+**Mantiene al día la traducción al español de Star Citizen sin que tengas que hacer nada**
 
-[🚀 Instalación](#-instalación-rápida) · [📖 Características](#-características) · [❓ FAQ](#-preguntas-frecuentes) · [🐛 Reportar Problema](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
+[🚀 Instalación](#-instalación) · [🎮 Canales](#-canales-del-juego-live-hotfix-ptu-y-eptu) · [🔍 Detección](#-cómo-encuentra-el-juego) · [❓ FAQ](#-preguntas-frecuentes) · [🐛 Problemas](#-solución-de-problemas) · [🧑‍💻 Desarrollo](#-desarrollo)
 
 </div>
 
@@ -17,451 +17,392 @@
 
 ## 📋 ¿Qué es esto?
 
-Este es un **sistema de actualización automática** que mantiene tu traducción al español de Star Citizen siempre actualizada sin que tengas que hacer nada.
+Un pequeño sistema (un instalador, un script y una tarea programada de Windows) que descarga e instala en tu juego la traducción al español de la comunidad ([Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)) cada vez que se publica una versión nueva.
 
-### 🎯 Lo que hace:
-
-- ✅ **Detecta automáticamente** dónde tienes instalado Star Citizen (en cualquier disco: C:, D:, E:, etc.)
-- ✅ **Verifica actualizaciones** desde el repositorio oficial de traducción
-- ✅ **Descarga e instala** solo cuando hay versiones nuevas
-- ✅ **Se ejecuta automáticamente** cada vez que inicias Windows
-- ✅ **Funciona en segundo plano** sin interrumpir tu trabajo
-- ✅ **Guarda un log** de todas las operaciones
+- ✅ **Encuentra el juego solo**, en cualquier disco y aunque lo tengas en una biblioteca personalizada.
+- ✅ **Se ejecuta al iniciar sesión** en segundo plano y espera a que haya red si todavía no la hay.
+- ✅ **Solo descarga cuando hay una versión nueva** (o cuando falta la traducción, por ejemplo tras reinstalar el juego).
+- ✅ **Soporta LIVE, HOTFIX, PTU y EPTU.** LIVE y HOTFIX automáticamente; PTU y EPTU solo si tú lo confirmas.
+- ✅ **Se mantiene a sí mismo al día** mediante las releases de este repositorio, verificando su integridad.
+- ✅ **Guarda un log** de todo lo que hace.
 
 ---
 
-## ✨ Características
+## 🚀 Instalación
 
-| Característica | Descripción |
-|----------------|-------------|
-| 🔍 **Detección Inteligente** | Encuentra Star Citizen en todos los discos automáticamente |
-| 🔄 **Actualización Automática** | Se ejecuta al iniciar Windows sin intervención |
-| 📊 **Log Detallado** | Registro completo de todas las operaciones |
-| ⚡ **Eficiente** | Solo descarga cuando detecta cambios |
-| 🎮 **Compatible** | Funciona con instalaciones en cualquier ubicación |
-| 🔒 **Seguro** | Código abierto y auditable |
+1. **Descarga** [`InstalarAutoUpdate.bat`](https://github.com/Raksiusdev/SC-LangUPD_ES/raw/main/InstalarAutoUpdate.bat).
+2. **Clic derecho → "Ejecutar como administrador".**
+3. Sigue las indicaciones. Al terminar pulsa Enter para lanzar la primera actualización.
+
+El instalador, en orden:
+
+```
+[1/4] Verificando conexión a internet...
+[2/4] Creando carpeta de scripts...            (C:\Scripts)
+[3/4] Descargando script desde GitHub...       (la última release publicada)
+[4/4] Configurando tarea programada...         (UpdateStarCitizenES, al iniciar sesión)
+      ...y ejecuta la primera actualización, visible en la consola
+```
+
+Durante esa primera ejecución, y **solo entonces**, te puede preguntar:
+
+- **Qué instalación usar**, si detecta más de una.
+- **La ruta de la carpeta del juego**, si no consigue encontrarla.
+- **Si quieres instalar también en PTU / EPTU**, si tienes esos canales (ver [Canales](#-canales-del-juego-live-hotfix-ptu-y-eptu)).
+
+Las ejecuciones posteriores (tarea programada) son silenciosas y reutilizan tus respuestas.
+
+> Para actualizar el sistema no hace falta reinstalar: el script se autoactualiza ([cómo](#-auto-actualización-del-propio-script)). Si quieres cambiar tus respuestas (instalación, PTU/EPTU), vuelve a ejecutar el instalador.
 
 ---
 
-## 🚀 Instalación Rápida
+## 🎮 Canales del juego: LIVE, HOTFIX, PTU y EPTU
 
-### Paso 1: Descargar el Instalador
+Una instalación de Star Citizen puede tener varios canales en paralelo, cada uno en su subcarpeta. El script instala la traducción **solo en los que existen realmente** en tu instalación:
 
-**Descarga:** [`InstalarAutoUpdate.bat`](https://github.com/Raksiusdev/SC-LangUPD_ES/raw/main/InstalarAutoUpdate.bat)
+| Canal | Qué hace el script | Textos que instala |
+|-------|--------------------|--------------------|
+| **LIVE** | Instala y actualiza automáticamente | los de LIVE |
+| **HOTFIX** | Instala y actualiza automáticamente | los de LIVE |
+| **PTU** | **Pregunta** una vez y recuerda la respuesta | los de PTU (el ZIP trae un `global.ini` específico) |
+| **EPTU** | **Pregunta** una vez y recuerda la respuesta | los de PTU (el ZIP no trae EPTU; es lo más cercano) |
 
-### Paso 2: Ejecutar como Administrador
+### ⚠️ Aviso sobre PTU y EPTU
 
-1. **Clic derecho** sobre `InstalarAutoUpdate.bat`
-2. Selecciona **"Ejecutar como administrador"**
-3. Espera a que termine
-
-### Paso 3: ¡Listo!
-
-El instalador hará automáticamente:
-
-```
-✅ Crear carpeta C:\Scripts\
-✅ Instalar el script de actualización
-✅ Configurar tarea programada
-✅ Ejecutar la primera actualización
-```
-
-**Verás algo como esto:**
+PTU y EPTU son versiones de prueba con contenido nuevo en desarrollo. La traducción puede no incluir todavía los textos más recientes, así que **puede que veas claves sin traducir o textos en inglés** en esos canales. Por eso el instalador te lo explica y te pide confirmación antes de instalar:
 
 ```
-================================================
-  INSTALADOR - Star Citizen ES Auto-Update
-================================================
-
-[OK] Ejecutando con privilegios de administrador
-
-[1/3] Creando carpeta de scripts...
-[OK] Carpeta creada: C:\Scripts
-
-[2/3] Creando script de actualización...
-[OK] Script creado correctamente
-
-[3/3] Configurando tarea programada...
-[OK] Tarea programada creada exitosamente
-
-================================================
-  INSTALACIÓN COMPLETADA
-================================================
-
-========================================
-  EJECUTANDO PRIMERA ACTUALIZACIÓN
-========================================
-
-Buscando Star Citizen...
-Descargando traducción...
-Instalando archivos...
-¡Actualización completada!
+================================================================
+  Canal PTU detectado en esta instalacion
+================================================================
+  AVISO: PTU y EPTU son versiones de pruebas con contenido nuevo
+  ...
+Instalar la traduccion tambien en PTU? (S/N) [N]:
 ```
+
+- Responder **N** (o Enter) significa que no se instala ni se actualiza en ese canal.
+- La decisión se guarda en `Star_citizen_ES_state.txt` (clave `PREVIEW_ON`). Las ejecuciones en segundo plano **nunca** instalan en PTU/EPTU sin una confirmación previa; si detectan un canal sin decidir, lo dejan anotado en el log.
+- Para cambiar de opinión, vuelve a ejecutar `InstalarAutoUpdate.bat`: te preguntará de nuevo. Si dices que no a un canal donde ya estaba instalada, los archivos que ya existen **no se borran**; para quitarla elimina `data\Localization\spanish_(spain)` y `user.cfg` dentro de la carpeta de ese canal.
+- Un canal solo cuenta como instalado si tiene `Data.p4k` o `Bin64\StarCitizen.exe`, así que carpetas vacías (por ejemplo una `PTU` creada por versiones antiguas de este script) se ignoran.
+
+### Qué se copia en cada canal
+
+La traducción trae dos archivos por canal:
+
+- `data\Localization\spanish_(spain)\global.ini`: los textos.
+- `user.cfg`: fija `g_language = spanish_(spain)`, `g_languageAudio = english` y `r_DepthOfField = 0` (desactiva el desenfoque de profundidad). **Este archivo sobrescribe tu `user.cfg`** de ese canal; si tenías ajustes propios, vuelve a añadirlos después de la primera instalación (las siguientes actualizaciones solo lo reescriben cuando hay una versión nueva).
 
 ---
 
-## 📁 ¿Qué se Instala?
+## 🔍 Cómo encuentra el juego
 
-| Archivo/Carpeta | Ubicación | Descripción |
-|-----------------|-----------|-------------|
-| `UpdateStarCitizenES.bat` | `C:\Scripts\` | Script de actualización |
-| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log de operaciones (se purga a las últimas 500 líneas en cada ejecución) |
-| `Star_citizen_ES_state.txt` | `%USERPROFILE%\` | Estado: versión instalada, instalación elegida (si hay más de una) y hash SHA256 del último ZIP instalado |
-| Tarea programada | Programador de Tareas | `UpdateStarCitizenES` |
+El script detecta las instalaciones **por capas** y se queda con todas las que encuentre:
 
----
-
-## 🔍 ¿Dónde Busca Star Citizen?
-
-El script detecta la instalación **automáticamente**, por capas, y se queda con todas las que encuentre:
-
-1. **Log del RSI Launcher** (`%APPDATA%\rsilauncher\logs`): el launcher registra la ruta real con la que lanza el juego, así que cubre bibliotecas en cualquier carpeta o disco.
+1. **Log del RSI Launcher** (`%APPDATA%\rsilauncher\logs`): el launcher anota la ruta real desde la que lanza el juego, así que cubre bibliotecas en cualquier carpeta o disco.
 2. **Rutas habituales** en todos los discos:
    ```
-   ✓ [Disco]:\Program Files\Roberts Space Industries\StarCitizen\
-   ✓ [Disco]:\Program Files (x86)\Roberts Space Industries\StarCitizen\
-   ✓ [Disco]:\StarCitizen\
-   ✓ [Disco]:\Roberts Space Industries\StarCitizen\
-   ✓ [Disco]:\Games\StarCitizen\
-   ✓ [Disco]:\Games\Roberts Space Industries\StarCitizen\
+   [Disco]:\Program Files\Roberts Space Industries\StarCitizen\
+   [Disco]:\Program Files (x86)\Roberts Space Industries\StarCitizen\
+   [Disco]:\StarCitizen\
+   [Disco]:\Roberts Space Industries\StarCitizen\
+   [Disco]:\Games\StarCitizen\
+   [Disco]:\Games\Roberts Space Industries\StarCitizen\
    ```
-3. **Escaneo de discos** (hasta 4 niveles de carpetas, solo si lo anterior no encontró nada) buscando carpetas llamadas `StarCitizen`.
+3. **Escaneo de discos** (hasta 4 niveles, solo si lo anterior no encontró nada) buscando carpetas llamadas `StarCitizen`. Ignora `Windows`, `AppData`, `ProgramData` y similares.
 
-Una carpeta solo cuenta como instalación si contiene un canal del juego (`LIVE`, `PTU`, `EPTU`, `HOTFIX` o `TECH-PREVIEW`) con `Data.p4k` o `Bin64\StarCitizen.exe` (o si el propio launcher indica que ha lanzado el juego desde ahí). Si una instalación solo tiene canales distintos de `LIVE` (por ejemplo solo `PTU`) se ignora y queda constancia en el log, porque la traducción se instala en `LIVE`.
+Una carpeta cuenta como instalación si contiene un canal (`LIVE`, `HOTFIX`, `PTU` o `EPTU`) con `Data.p4k` o `Bin64\StarCitizen.exe` (o si el propio launcher indica que ha lanzado el juego desde ahí).
 
-Una vez elegida una instalación se guarda en `Star_citizen_ES_state.txt` y las siguientes ejecuciones ya no vuelven a buscar.
+**Cuándo se detecta.** Solo cuando no hay una ruta guardada válida. Una vez elegida, la instalación se guarda (`INSTALL_PATH` en `Star_citizen_ES_state.txt`) y las siguientes ejecuciones no vuelven a buscar.
 
-**Si no se encuentra nada**, el instalador te pide la ruta a mano (la carpeta que contiene `LIVE`, por ejemplo `D:\Juegos\StarCitizen`) y la guarda. Las ejecuciones en segundo plano **no instalan nada** si no hay ruta: lo dejan escrito en el log en vez de crear carpetas por defecto.
+**Si no se encuentra nada**, el instalador te pide la ruta (la carpeta que contiene `LIVE`, por ejemplo `D:\Juegos\StarCitizen`; si pegas la de un canal, sube un nivel solo) y la guarda. Las ejecuciones en segundo plano **no instalan nada** si no hay ruta: lo dejan escrito en el log y terminan con código 1.
 
-> Nota: el log del launcher se lee del usuario que ejecuta el script. Si ejecutas el instalador con otra cuenta de administrador, esa fuente no estará disponible y se usarán las otras dos.
+> El log del launcher se lee del usuario que ejecuta el script. Si ejecutas el instalador con otra cuenta de administrador esa fuente no estará disponible y se usarán las otras dos.
 
 ### ¿Tienes el juego instalado más de una vez?
 
-El script busca en **todos** los discos y detecta **todas** las instalaciones que encuentre, no se queda con la primera. Si detecta más de una:
-
-- Durante la **instalación** (`InstalarAutoUpdate.bat`), te mostrará la lista y te dejará elegir cuál usar. Esa elección se guarda en `Star_citizen_ES_state.txt` (clave `INSTALL_PATH`).
-- Las **actualizaciones automáticas** posteriores (al iniciar sesión) usan siempre esa instalación guardada, sin volver a preguntar.
-- Si no has elegido ninguna todavía y el script se ejecuta en segundo plano (por ejemplo, la primera vez que detecta dos instalaciones sin haber pasado por el instalador), usa la primera que encuentre y lo indica en el log — vuelve a ejecutar `InstalarAutoUpdate.bat` para elegir otra.
-- Si quieres cambiar de instalación más adelante, borra `%USERPROFILE%\Star_citizen_ES_state.txt` y vuelve a ejecutar el instalador.
-
-### Verificación del ZIP descargado
-
-Antes de instalar, el script comprueba que el ZIP descargado no esté vacío o incompleto, calcula su hash SHA256 (se guarda en `Star_citizen_ES_state.txt` y se registra en el log, útil para soporte) y verifica que el contenido extraído realmente incluya `global.ini` antes de copiar nada sobre la instalación del juego. Si algo de esto falla, se aborta sin tocar la traducción existente. Nota: Thord82 no publica un checksum oficial en sus releases, así que esto detecta descargas corruptas/incompletas, pero no puede verificar la autenticidad del contenido contra una fuente externa.
+- En el **instalador** te muestra la lista y eliges cuál usar; se guarda en el estado.
+- Las **actualizaciones automáticas** usan siempre esa instalación guardada.
+- Si no has elegido ninguna y el script corre en segundo plano, usa la primera que encuentre y lo anota en el log (la del log del launcher va primero).
+- Para cambiar de instalación, borra `%USERPROFILE%\Star_citizen_ES_state.txt` y vuelve a ejecutar el instalador.
 
 ---
 
-## ✅ Verificar que Funciona
+## 📁 ¿Qué se instala?
 
-### Ver el Log
+| Archivo / elemento | Ubicación | Descripción |
+|--------------------|-----------|-------------|
+| `UpdateStarCitizenES.bat` | `C:\Scripts\` | El script de actualización |
+| `SC_Lang_updater.vbs` | `C:\Scripts\` | Lanzador que ejecuta el script sin mostrar ventana |
+| Tarea programada `UpdateStarCitizenES` | Programador de tareas | Ejecuta el lanzador al iniciar sesión |
+| `Star_citizen_ES_update_log.txt` | `%USERPROFILE%\` | Log (se purga a las últimas 500 líneas en cada ejecución) |
+| `Star_citizen_ES_state.txt` | `%USERPROFILE%\` | Estado: versión de la traducción instalada (`RELEASE`), instalación elegida (`INSTALL_PATH`), hash SHA256 del último ZIP (`ZIP_SHA256`) y canales de prueba aceptados (`PREVIEW_ON`) |
 
-Abre el log para ver todas las operaciones:
+---
+
+## ✅ Verificar que funciona
+
+### Ver el log
 
 ```cmd
 notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
 ```
 
-**Verás información como:**
+Cada línea es `[hora] [NIVEL] mensaje`, con niveles `INFO`, `OK`, `WARN` o `ERROR`. Una ejecución normal sin novedades:
+
 ```
 ========================================
-Inicio: 17/12/2025 15:30:45
+Inicio: 04/10/2026 12:36:46,22
 ========================================
-[15:30:45,12] [INFO] Buscando Star Citizen en todos los discos...
-[15:30:45,15] [INFO] Comprobando disco C:
-[15:30:45,17] [INFO] Comprobando disco D:
-[15:30:45,20] [OK] Encontrado en D:\StarCitizen
-[15:30:45,21] [OK] Ruta detectada correctamente
-[15:30:45,22] [INFO] Destino: D:\StarCitizen
-[15:30:45,90] [INFO] Ultima release remota: 3.24.3
-[15:30:45,91] [INFO] No hay registro de version instalada
-[15:30:45,92] [INFO] RAZON: Nueva version disponible (3.24.3)
-[15:30:45,95] [INFO] Descargando Star_citizen_ES.zip...
-[15:30:47,10] [INFO] Extrayendo archivos...
-[15:30:47,50] [INFO] Instalando traduccion en el juego...
-[15:30:47,60] [OK] Version instalada: 3.24.3
-[15:30:47,61] [OK] Actualizacion completada exitosamente
+[12:36:46,91] [INFO] El script ya esta actualizado (version 0.4.0)
+[12:36:47,02] [INFO] Usando instalacion guardada: C:\Program Files\Roberts Space Industries\StarCitizen
+[12:36:47,10] [INFO] Canales de destino: LIVE HOTFIX
+[12:36:47,50] [INFO] Ultima release remota: 4.10.10.00
+[12:36:47,51] [OK] Archivos de traduccion encontrados en todos los canales de destino
+[12:36:47,52] [OK] Ya actualizado (version 4.10.10.00)
 ========================================
 ```
 
-Cada línea sigue el formato `[hora] [NIVEL] mensaje`, con niveles `INFO`, `OK`, `WARN` o `ERROR`. El log es un único archivo que se purga automáticamente a las últimas 500 líneas en cada ejecución, así que nunca crece sin límite.
+Y una instalación con descarga:
 
-### Ejecutar Manualmente
+```
+[12:21:44,76] [INFO] RAZON: faltan archivos de traduccion en: LIVE PTU, descargando...
+[12:21:46,26] [INFO] SHA256 del ZIP: 7E0AAC4B...
+[12:21:47,31] [INFO] Instalando traduccion en el juego...
+[12:21:47,33] [OK] Traduccion instalada en el canal LIVE (origen: LIVE)
+[12:21:47,35] [OK] Traduccion instalada en el canal PTU (origen: PTU)
+[12:21:47,38] [OK] Version instalada: 4.10.10.00
+```
 
-Puedes ejecutar la actualización cuando quieras:
+### Ejecutar manualmente
 
 ```cmd
-# Ejecutar desde la tarea programada
 schtasks /run /tn "UpdateStarCitizenES"
-
-# O ejecutar el script directamente
-C:\Scripts\UpdateStarCitizenES.bat
 ```
 
-### Ver Estado de la Tarea
-
-```cmd
-schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
-```
+o directamente `C:\Scripts\UpdateStarCitizenES.bat`.
 
 ---
 
-## 🛠️ Gestión del Sistema
-
-### Comandos Útiles
+## 🛠️ Gestión del sistema
 
 ```cmd
-# Ver información de la tarea
-schtasks /query /tn "UpdateStarCitizenES"
+:: Estado de la tarea
+schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
 
-# Ejecutar actualización ahora
-schtasks /run /tn "UpdateStarCitizenES"
-
-# Desactivar temporalmente
+:: Desactivar / reactivar temporalmente
 schtasks /change /tn "UpdateStarCitizenES" /disable
-
-# Reactivar
 schtasks /change /tn "UpdateStarCitizenES" /enable
 
-# Eliminar completamente
+:: Desinstalar (la traducción ya instalada en el juego no se borra)
 schtasks /delete /tn "UpdateStarCitizenES" /f
 del C:\Scripts\UpdateStarCitizenES.bat
+del C:\Scripts\SC_Lang_updater.vbs
 ```
 
-### Actualizar el Sistema
-
-Si hay una nueva versión del instalador/script:
-
-1. **Descarga** el nuevo `InstalarAutoUpdate.bat`
-2. **Ejecuta como administrador** - sobrescribirá la versión anterior
-3. ¡Listo!
+Para reinstalar o cambiar tus respuestas, vuelve a ejecutar `InstalarAutoUpdate.bat` como administrador: sobrescribe lo anterior.
 
 ---
 
-## 🔄 Cómo Funciona
-
-### Flujo de Actualización
+## 🔄 Cómo funciona
 
 ```mermaid
 graph TD
-    A[Windows inicia] --> B[Tarea programada se activa]
-    B --> C{¿Internet disponible?}
-    C -->|No| D[Termina sin cambios]
-    C -->|Sí| E[Busca Star Citizen en todos los discos]
-    E --> F[Consulta última versión en GitHub]
-    F --> G{¿Hay actualización?}
-    G -->|No| D
-    G -->|Sí| H[Descarga ZIP de traducción]
-    H --> I[Extrae archivos]
-    I --> J[Instala en carpeta del juego]
-    J --> K[Guarda versión instalada]
-    K --> L[Limpia archivos temporales]
-    L --> M[Fin ✅]
+    A[Inicio de sesión] --> B[Tarea programada]
+    B --> C{¿Conexión con GitHub?}
+    C -->|No| C2[Reintenta hasta 6 veces, cada 10 s]
+    C2 -->|Sigue sin red| Z[Termina; reintenta en el próximo inicio]
+    C -->|Sí| D[Comprueba nueva versión del propio script]
+    D -->|Hay nueva y su SHA256 es correcto| D2[Se aplica desde un proceso aparte y se relanza]
+    D -->|No| E{¿Ruta de instalación guardada?}
+    E -->|No| F[Detecta instalaciones y la elige/pregunta]
+    E -->|Sí| G[Calcula canales de destino]
+    F --> G
+    G --> H{¿Versión nueva o faltan archivos en algún canal?}
+    H -->|No| Y[Fin: ya actualizado]
+    H -->|Sí| I[Descarga y verifica el ZIP]
+    I --> J[Instala en cada canal de destino]
+    J --> K[Guarda el estado y limpia temporales]
 ```
 
-### Detección de Versiones
+### Detección de versiones de la traducción
 
-El sistema usa **releases de GitHub** para determinar si hay actualizaciones:
+1. Consulta `https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest`.
+2. Compara con la `RELEASE` guardada en `Star_citizen_ES_state.txt`.
+3. Si es distinta, o falta `global.ini` en algún canal de destino, descarga e instala. Si no, termina.
 
-1. Consulta la API de GitHub: `https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest`
-2. Compara con la versión local guardada en `Star_citizen_ES_state.txt` (clave `RELEASE`)
-3. Si son diferentes → descarga e instala
-4. Si son iguales → termina sin hacer nada
+### Verificación del ZIP descargado
 
-### Auto-actualización del propio script
+Antes de instalar comprueba que el ZIP no esté vacío o incompleto, calcula su SHA256 (se guarda en el estado y en el log, útil para soporte) y verifica que el contenido extraído incluya `global.ini`. Si algo falla se aborta sin tocar la traducción existente. Thord82 no publica un checksum oficial, así que esto detecta descargas corruptas pero no puede verificar la autenticidad del contenido.
 
-El script también se mantiene a sí mismo al día. En cada ejecución comprueba si hay una **release publicada** de este repositorio (`Raksiusdev/SC-LangUPD_ES`) más reciente que la versión instalada — a propósito no se fija en los últimos commits de `main`, solo en releases marcadas explícitamente como listas. Si hay una nueva:
+### 🔁 Auto-actualización del propio script
 
-1. Descarga `UpdateStarCitizenES.bat` y `SC_Lang_updater.vbs` correspondientes a esa release.
-2. Verifica que el `.bat` descargado sea válido antes de aplicarlo.
-3. Aplica el reemplazo desde un proceso auxiliar independiente (nunca se sobrescribe a sí mismo mientras sigue corriendo, para evitar corromper la ejecución) y relanza el script ya actualizado.
-4. Todo el proceso queda registrado en el log (`Star_citizen_ES_update_log.txt`).
+El script se mantiene al día con las **releases publicadas** de este repositorio (no con commits sueltos de `main`: solo lo que se marca explícitamente como release). En cada ejecución, si hay una release más reciente que su `SCRIPT_VERSION`:
 
-Si no hay conexión o no se puede descargar la nueva versión, simplemente continúa con la versión actual sin interrumpir la actualización de la traducción.
+1. Descarga `UpdateStarCitizenES.bat` y `SC_Lang_updater.vbs` de ese tag.
+2. Comprueba que el `.bat` sea válido y **verifica los hashes SHA256** contra el `SHA256SUMS.txt` que publica la release. Si no coinciden, descarta la actualización. Si una release antigua no lo publica, continúa y lo anota en el log. *Esto protege de descargas corruptas o truncadas; no protege frente a un repositorio comprometido, porque los hashes salen del mismo repositorio.*
+3. Lo aplica desde un proceso auxiliar independiente, sin que el script se sobrescriba mientras se ejecuta, y se relanza ya actualizado. El proceso original termina antes de que se copie el archivo, y una protección evita bucles de actualización.
+4. Todo queda en el log.
 
----
-
-## 🧑‍🔬 Cómo probar la rama `dev`
-
-Antes de que los cambios lleguen a `main` (y por tanto a los usuarios), se pueden probar en local sin publicar nada:
-
-1. Descarga `InstalarAutoUpdate.bat` desde `dev` en vez de `main`: `https://github.com/Raksiusdev/SC-LangUPD_ES/raw/dev/InstalarAutoUpdate.bat`
-2. Edita ese archivo descargado y cambia la línea `set "SCRIPT_REF=release"` por `set "SCRIPT_REF=dev"`, para que también descargue `UpdateStarCitizenES.bat` y `SC_Lang_updater.vbs` desde `dev`.
-3. Ejecútalo como Administrador. Cuando llegue a la pantalla "PULSA ENTER PARA EJECUTAR PRIMERA ACTUALIZACIÓN", **antes de pulsar Enter**, abre `C:\Scripts\UpdateStarCitizenES.bat` y cambia `set "SCRIPT_VERSION=dev"` por el valor de la última release publicada (por ejemplo `set "SCRIPT_VERSION=0.2.0"`). Esto evita que la auto-actualización del propio script te revierta a esa release nada más arrancar, ya que solo confía en releases publicadas, no en `dev`.
-4. Pulsa Enter y sigue el flujo normal. Revisa `%USERPROFILE%\Star_citizen_ES_update_log.txt` y `%USERPROFILE%\Star_citizen_ES_state.txt` para confirmar el resultado.
-
-Esto no toca `main` ni publica nada — es solo una copia local apuntando a otra rama.
+Si no hay conexión o falla la descarga, sigue con la versión actual sin interrumpir la actualización de la traducción.
 
 ---
 
-## 💡 Mejoras futuras (ideas, no implementadas)
-
-- **Soporte para otros canales del juego además de LIVE**, por ejemplo `HOTFIX`, `PTU`, `EPTU` o `TECH-PREVIEW`. Hoy el script solo busca y actualiza la carpeta `LIVE` de cada instalación detectada (ver [¿Funciona con PTU o EPTU?](#-funciona-con-ptu-o-eptu)); una carpeta de instalación de Star Citizen puede tener varios de estos canales en paralelo, cada uno con su propia subcarpeta `data\Localization\`. La idea sería detectar qué canales existen dentro de cada instalación (no solo comprobar que exista `LIVE`) y ofrecer instalar la traducción en todos los que apliquen, o dejar elegir cuáles — de forma similar a como ya se eligen instalaciones múltiples.
-
----
-
-## ❓ Preguntas Frecuentes
+## ❓ Preguntas frecuentes
 
 ### ¿Necesito configurar algo?
+No. Ejecuta el instalador como administrador y responde a lo que te pregunte la primera vez.
 
-**No.** El instalador hace todo automáticamente. Solo tienes que ejecutarlo como administrador.
+### ¿Funciona con PTU, EPTU o HOTFIX?
+Sí. HOTFIX se instala automáticamente cuando existe. PTU y EPTU solo si tú lo confirmas, porque son versiones de prueba y puede que falten textos nuevos. Ver [Canales](#-canales-del-juego-live-hotfix-ptu-y-eptu).
 
-### ¿Detecta automáticamente dónde tengo el juego?
+### ¿Detecta dónde tengo el juego?
+Sí, por capas (log del launcher, rutas habituales y escaneo de discos). Si no lo encuentra, el instalador te pide la ruta. Ver [Cómo encuentra el juego](#-cómo-encuentra-el-juego).
 
-**Sí.** Usa el log del RSI Launcher, las ubicaciones más comunes en todos los discos y, si hace falta, un escaneo de los discos. Si no encuentra nada, el instalador te pide la ruta (ver [¿Dónde busca Star Citizen?](#-dónde-busca-star-citizen)).
+### ¿Qué pasa si no hay internet al iniciar Windows?
+La tarea espera y reintenta hasta 6 veces (cada 10 segundos). Si sigue sin conexión, termina sin error y lo vuelve a intentar en el siguiente inicio de sesión.
 
 ### ¿Qué pasa si ya está actualizado?
-
-El script verifica la versión en GitHub. Si ya tienes la última, termina inmediatamente sin descargar nada.
+Comprueba la versión en GitHub y termina sin descargar nada.
 
 ### ¿Consume muchos recursos?
+No. Tarda unos segundos y solo descarga cuando hay una versión nueva. El resto del tiempo no hay nada en ejecución.
 
-**No.** El script tarda 5-30 segundos en ejecutarse y solo cuando hay actualizaciones. El resto del tiempo no consume nada.
+### ¿Afecta al rendimiento del juego?
+No: son archivos de texto de traducción. Ojo con `user.cfg`: el de la traducción desactiva `r_DepthOfField` (desenfoque de profundidad) y deja el audio en inglés, y **sobrescribe el tuyo**. Ver [Qué se copia en cada canal](#qué-se-copia-en-cada-canal).
 
 ### ¿Puedo desactivarlo temporalmente?
-
-**Sí:**
 ```cmd
 schtasks /change /tn "UpdateStarCitizenES" /disable
-```
-
-Para reactivarlo:
-```cmd
 schtasks /change /tn "UpdateStarCitizenES" /enable
 ```
 
-### ¿Afecta al rendimiento del juego?
-
-**No.** Son solo archivos de texto de traducción. No afectan al rendimiento ni modifican archivos del juego.
-
-### ¿Funciona con PTU o EPTU?
-
-El script está configurado para la versión **LIVE** del juego. Para PTU necesitarías editar el script manualmente.
-
-### ¿Qué pasa si borro accidentalmente los archivos?
-
-Simplemente vuelve a ejecutar el instalador. Recreará todo desde cero.
-
 ### ¿Es seguro?
+El código es abierto y auditable. Solo descarga desde el repositorio de la traducción ([Thord82](https://github.com/Thord82/Star_citizen_ES)) y desde las releases de este repositorio (los scripts, con verificación de hashes). El instalador necesita administrador únicamente para crear la tarea programada y escribir en `C:\Scripts`.
 
-**Sí.** El código es completamente abierto y auditable. Solo descarga archivos desde el repositorio oficial de traducción en GitHub.
+### ¿Qué pasa si borro archivos por accidente?
+Vuelve a ejecutar el instalador (o `schtasks /run /tn "UpdateStarCitizenES"` si solo faltan archivos de la traducción: se detecta y se reinstalan).
 
-### ¿Necesito ejecutarlo cada vez que inicio Windows?
-
-**No.** Se ejecuta automáticamente al iniciar sesión. No tienes que hacer nada.
+### ¿Tengo que ejecutarlo cada vez que inicio Windows?
+No, se ejecuta solo al iniciar sesión.
 
 ---
 
-## 🐛 Solución de Problemas
+## 🐛 Solución de problemas
 
 ### El instalador dice "Necesita ejecutarse como Administrador"
-
-**Solución:**
-1. Clic derecho en `InstalarAutoUpdate.bat`
-2. **"Ejecutar como administrador"**
+Clic derecho en `InstalarAutoUpdate.bat` → **Ejecutar como administrador**.
 
 ### No encuentra Star Citizen
+**Causas:** biblioteca en una ubicación no estándar, o instalación sin `Data.p4k` (descarga incompleta).
 
-**Causa:** Instalación en ubicación no estándar, o solo con un canal distinto de `LIVE` (p. ej. únicamente `PTU`).
-
-**Solución:**
 1. Ejecuta de nuevo `InstalarAutoUpdate.bat` como administrador.
-2. Si no detecta el juego, te pedirá la ruta: indica la carpeta que contiene `LIVE` (por ejemplo `D:\Juegos\StarCitizen`).
-3. Si el juego solo tiene `PTU`, ejecuta `LIVE` al menos una vez desde el launcher para que exista esa carpeta.
-4. Revisa `%USERPROFILE%\Star_citizen_ES_update_log.txt` para ver qué rutas ha encontrado o descartado.
+2. Si no lo detecta, te pedirá la ruta: la carpeta que contiene `LIVE` (p. ej. `D:\Juegos\StarCitizen`).
+3. Revisa el log: lista qué instalaciones encontró.
+
+### No se ha instalado nada en PTU / EPTU
+Es lo esperado hasta que lo confirmes. Ejecuta el instalador de nuevo y responde **S** cuando pregunte por ese canal. En el log aparece `Canal PTU detectado pero sin confirmar`.
+
+### En PTU veo claves sin traducir o textos en inglés
+Es el aviso del instalador: el contenido de PTU/EPTU va por delante de la traducción. Se resuelve cuando la comunidad la actualiza (se instalará sola en la siguiente versión).
 
 ### Error "No se pudo obtener la versión de GitHub"
+Sin conexión, GitHub caído o un firewall bloqueando.
 
-**Causas posibles:**
-- Sin conexión a internet
-- GitHub está caído
-- Firewall bloqueando la conexión
-
-**Solución:**
 ```cmd
-# Verificar conexión
-ping github.com
-
-# Probar manualmente
 curl https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest
 ```
 
-### La tarea no se ejecuta al iniciar
-
-**Verificar:**
+### La tarea no se ejecuta al iniciar sesión
 ```cmd
 schtasks /query /tn "UpdateStarCitizenES" /fo LIST /v
 ```
 
-**Recrear:**
+Para recrearla (como administrador):
 ```cmd
 schtasks /delete /tn "UpdateStarCitizenES" /f
-schtasks /create /tn "UpdateStarCitizenES" /tr "C:\Scripts\UpdateStarCitizenES.bat" /sc onlogon /rl highest /f
+schtasks /create /tn "UpdateStarCitizenES" /tr "wscript.exe \"C:\Scripts\SC_Lang_updater.vbs\"" /sc onlogon /rl highest /f
+```
+(o simplemente vuelve a ejecutar el instalador).
+
+### Error al descargar o extraer archivos
+Mira el log. Errores comunes:
+- `[ERROR] Fallo la descarga` → conexión o espacio en disco.
+- `[ERROR] Fallo al expandir el archivo` → ZIP corrupto; se reintentará en la siguiente ejecución.
+- `[ERROR] Fallo al copiar la traduccion en el canal X` → falta de permisos o archivos en uso (cierra el juego y el launcher); se reintenta solo.
+
+### Quiero que me ayuden: ¿qué incluyo en el issue?
+El contenido del log, tu versión de Windows, dónde tienes instalado el juego y el mensaje de error exacto.
+
+---
+
+## 💻 Desarrollo
+
+### Ramas y releases
+
+- `dev`: integración. `main`: la base de las releases y el archivo del instalador que descargan los usuarios nuevos.
+- **Los usuarios reciben el código de las releases**, no el de `main`: el instalador descarga los scripts del **tag de la última release**, igual que la autoactualización. Un merge a `main` sin release no llega a nadie.
+
+Para publicar una versión:
+
+1. Mergea a `main` y pon `SCRIPT_VERSION` en `UpdateStarCitizenES.bat` igual al número del tag (`0.4.0` para `v0.4.0`).
+2. Publica la release: `gh release create v0.4.0 --target main --generate-notes`.
+3. La acción [`release-checksums`](.github/workflows/release-checksums.yml) adjunta `SHA256SUMS.txt` automáticamente.
+4. Los equipos con una versión anterior se actualizan solos en su siguiente ejecución.
+
+### Probar una rama sin publicar nada
+
+1. Descarga `InstalarAutoUpdate.bat` desde la rama: `https://github.com/Raksiusdev/SC-LangUPD_ES/raw/dev/InstalarAutoUpdate.bat`.
+2. Edita el archivo y cambia `set "SCRIPT_REF=release"` por `set "SCRIPT_REF=dev"` (descargará los scripts de esa rama).
+3. Ejecútalo como administrador. Antes de pulsar Enter en "PULSA ENTER PARA EJECUTAR PRIMERA ACTUALIZACIÓN", abre `C:\Scripts\UpdateStarCitizenES.bat` y cambia `set "SCRIPT_VERSION=dev"` por la versión de la última release (la autoactualización solo confía en releases y te revertiría).
+4. Pulsa Enter y revisa `%USERPROFILE%\Star_citizen_ES_update_log.txt` y `%USERPROFILE%\Star_citizen_ES_state.txt`.
+
+### Tests
+
+Los tests viven en [`tests/`](tests) y corren en GitHub Actions ([`tests.yml`](.github/workflows/tests.yml)) en cada push y pull request. En local:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\run-all.ps1            # todos
+powershell -ExecutionPolicy Bypass -File tests\run-all.ps1 -SinRed    # sin los que descargan la traducción
 ```
 
-### Error al descargar/extraer archivos
+| Test | Qué cubre | Red |
+|------|-----------|-----|
+| `Test-Detection.ps1` | Detección por capas: log del launcher, rutas conocidas, escaneo, límite de profundidad, descarte de carpetas sueltas | No |
+| `Test-SelfUpdateIntegrity.ps1` | Verificación SHA256 de la autoactualización (coincide / no coincide / sin archivo de hashes) | No |
+| `Test-Flows.ps1` | Flujos completos sobre instalaciones simuladas: sin instalación, ruta manual, varios canales con confirmación de PTU/EPTU, reparación, reintento sin red | Sí |
 
-**Revisa el log:**
-```cmd
-notepad %USERPROFILE%\Star_citizen_ES_update_log.txt
-```
+Todo ocurre en carpetas temporales: los tests aíslan `USERPROFILE`, `APPDATA` y las raíces de búsqueda, así que no tocan tu instalación real.
 
-**Errores comunes:**
-- `[ERROR] Fallo la descarga` → Verifica conexión a internet y espacio en disco
-- `[ERROR] Fallo al expandir el archivo` → El ZIP puede estar corrupto, intenta de nuevo
+### Ideas futuras
+
+- Soporte de `TECH-PREVIEW` como canal opcional.
+- Opción de desinstalar la traducción de un canal desde el instalador.
 
 ---
 
 ## 👥 Créditos
 
-- **Traducción oficial:** [Thord82](https://github.com/Thord82) - [Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)
+- **Traducción:** [Thord82](https://github.com/Thord82) - [Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)
 - **Sistema de actualización:** [Raksiusdev](https://github.com/Raksiusdev)
-- **Comunidad Star Citizen ES** - Por el apoyo y feedback
-
----
+- **Comunidad Star Citizen ES**, por el apoyo y el feedback.
 
 ## 📜 Licencia
 
-Este proyecto está bajo la Licencia MIT - Ver el archivo [LICENSE](LICENSE) para más detalles.
+MIT. Ver [LICENSE](LICENSE).
 
----
+## 🔗 Enlaces útiles
 
-## 🔗 Enlaces Útiles
-
-- 🎮 [Star Citizen Official](https://robertsspaceindustries.com/)
+- 🎮 [Star Citizen](https://robertsspaceindustries.com/)
 - 💬 [Comunidad Star Citizen España](https://discord.gg/starcitizenes)
-- 📖 [Repositorio de Traducción Oficial](https://github.com/Thord82/Star_citizen_ES)
-- 🐛 [Reportar Problemas](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
+- 📖 [Repositorio de la traducción](https://github.com/Thord82/Star_citizen_ES)
+- 🐛 [Reportar problemas](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
 - 📚 [Issue Council (RSI)](https://issue-council.robertsspaceindustries.com/)
-
----
-
-## 🆘 Soporte
-
-¿Necesitas ayuda?
-
-1. **Revisa las [FAQ](#-preguntas-frecuentes)**
-2. **Consulta [Solución de Problemas](#-solución-de-problemas)**
-3. **Revisa el log:** `%USERPROFILE%\Star_citizen_ES_update_log.txt`
-4. **Abre un [Issue en GitHub](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)**
-
-Al reportar problemas, incluye:
-- ✅ Contenido del log
-- ✅ Versión de Windows
-- ✅ Ubicación de Star Citizen
-- ✅ Mensaje de error exacto
 
 ---
 
 <div align="center">
 
-**¿Te ha sido útil?** ⭐ Dale una estrella al repositorio
-
-**¿Problemas?** 🐛 [Abre un Issue](https://github.com/Raksiusdev/SC-LangUPD_ES/issues)
-
-**¿Quieres contribuir?** 🤝 ¡Los Pull Requests son bienvenidos!
-
----
-
-**Traducción oficial por:** [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES)
+**¿Te ha sido útil?** ⭐ Dale una estrella al repositorio · **¿Problemas?** 🐛 [Abre un issue](https://github.com/Raksiusdev/SC-LangUPD_ES/issues) · **¿Quieres contribuir?** 🤝 Los Pull Requests son bienvenidos
 
 Hecho con ❤️ por la comunidad de Star Citizen España
 

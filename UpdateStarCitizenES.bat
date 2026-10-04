@@ -14,9 +14,19 @@ set "STATE_FILE=%USERPROFILE%\%GITHUB_REPO%_state.txt"
 set "LOG_FILE=%USERPROFILE%\%GITHUB_REPO%_update_log.txt"
 set "LOG_MAX_LINES=500"
 
+REM === Canales del juego. LIVE y HOTFIX se instalan automaticamente si existen.
+REM     PTU y EPTU son versiones de pruebas: solo se instalan si el usuario lo
+REM     confirma en el instalador (la decision se guarda en el archivo de estado). ===
+set "CHANNELS_AUTO=LIVE HOTFIX"
+set "CHANNELS_PREVIEW=PTU EPTU"
+
+REM === Espera de red al iniciar sesion (puede no estar lista todavia) ===
+set "NET_MAX_TRIES=6"
+set "NET_RETRY_SECS=10"
+
 REM === Auto-actualizacion del propio script (contra releases de este repo,
 REM     no commits de main, para no desplegar cambios sin marcar como listos) ===
-set "SCRIPT_VERSION=0.3.0"
+set "SCRIPT_VERSION=0.4.0"
 set "SELF_OWNER=Raksiusdev"
 set "SELF_REPO=SC-LangUPD_ES"
 
@@ -34,6 +44,28 @@ echo ========================================>> "%LOG_FILE%"
 echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
 echo ========================================>> "%LOG_FILE%"
 
+REM === Esperar a que haya conexion con GitHub (comprobacion TCP al puerto 443:
+REM     el ping falla en redes que bloquean ICMP aunque HTTPS funcione) ===
+set "NET_TRIES=0"
+set /a NET_SLEEP=NET_RETRY_SECS+1
+
+:wait_network
+powershell -NoProfile -Command "try { $c = New-Object Net.Sockets.TcpClient; if ($c.ConnectAsync('api.github.com',443).Wait(5000) -and $c.Connected) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+if %ERRORLEVEL% equ 0 goto :network_ok
+set /a NET_TRIES+=1
+if %NET_TRIES% GEQ %NET_MAX_TRIES% goto :network_failed
+call :log WARN "Sin conexion con GitHub (intento %NET_TRIES% de %NET_MAX_TRIES%), reintentando en %NET_RETRY_SECS% s..."
+ping -n %NET_SLEEP% 127.0.0.1 >nul
+goto :wait_network
+
+:network_failed
+call :log ERROR "Sin conexion con GitHub tras %NET_MAX_TRIES% intentos, se omite esta ejecucion"
+if "%INTERACTIVE%"=="1" echo [ERROR] Sin conexion con GitHub. Comprueba tu red y vuelve a ejecutar el instalador.
+echo ======================================== >> "%LOG_FILE%"
+exit /b 0
+
+:network_ok
+
 REM === Comprobar si hay una nueva version del propio script publicada ===
 set "SELF_UPDATING="
 call :selfupdate_check
@@ -46,11 +78,13 @@ REM === Cargar estado guardado (release instalada, instalacion elegida, hash del
 set "LOCAL_RELEASE=none"
 set "SAVED_PATH="
 set "SAVED_HASH="
+set "PREVIEW_ON="
 if exist "%STATE_FILE%" (
     for /f "usebackq tokens=1,2 delims==" %%k in ("%STATE_FILE%") do (
         if /I "%%k"=="RELEASE" set "LOCAL_RELEASE=%%l"
         if /I "%%k"=="INSTALL_PATH" set "SAVED_PATH=%%l"
         if /I "%%k"=="ZIP_SHA256" set "SAVED_HASH=%%l"
+        if /I "%%k"=="PREVIEW_ON" set "PREVIEW_ON=%%l"
     )
 )
 
@@ -61,7 +95,8 @@ REM acotado de los discos. Cada linea que devuelve es TAG|ruta.
 set "FOUND_COUNT=0"
 REM Con una ruta guardada valida no hace falta detectar nada (ejecuciones silenciosas)
 if not defined SAVED_PATH goto :detect_installs
-if exist "%SAVED_PATH%\LIVE" goto :pick_install
+call :root_ok "%SAVED_PATH%"
+if defined ROOT_OK goto :pick_install
 
 :detect_installs
 call :log INFO "Buscando instalaciones de Star Citizen (launcher, rutas conocidas y escaneo de discos)..."
@@ -73,7 +108,8 @@ REM === Elegir instalación destino ===
 set "DEST_DIR="
 
 if not defined SAVED_PATH goto :no_saved_path
-if not exist "%SAVED_PATH%\LIVE" goto :saved_invalid
+call :root_ok "%SAVED_PATH%"
+if not defined ROOT_OK goto :saved_invalid
 set "DEST_DIR=%SAVED_PATH%"
 call :log INFO "Usando instalacion guardada: %DEST_DIR%"
 goto :after_detect
@@ -91,20 +127,25 @@ call :log WARN "No se encontro Star Citizen automaticamente"
 if not "%INTERACTIVE%"=="1" goto :no_install_abort
 echo.
 echo No se ha encontrado Star Citizen automaticamente.
-echo Indica la carpeta de instalacion: la que contiene la carpeta LIVE
+echo Indica la carpeta de instalacion: la que contiene las carpetas LIVE, PTU...
 echo ^(ejemplo: D:\Roberts Space Industries\StarCitizen^)
 set "MANUAL_TRIES=0"
 
 :ask_manual_path
 set /a MANUAL_TRIES+=1
 set "MANUAL_PATH="
-set /p "MANUAL_PATH=Ruta (vacio para cancelar): "
+call :prompt MANUAL_PATH "Ruta (vacio para cancelar): "
 if not defined MANUAL_PATH goto :no_install_abort
 set "MANUAL_PATH=%MANUAL_PATH:"=%"
 if "%MANUAL_PATH:~-1%"=="\" set "MANUAL_PATH=%MANUAL_PATH:~0,-1%"
+REM Si pegan la ruta de un canal (...\StarCitizen\LIVE) se sube un nivel
 if /I "%MANUAL_PATH:~-5%"=="\LIVE" set "MANUAL_PATH=%MANUAL_PATH:~0,-5%"
-if exist "%MANUAL_PATH%\LIVE\" goto :manual_path_ok
-echo No existe la carpeta "%MANUAL_PATH%\LIVE", revisa la ruta.
+if /I "%MANUAL_PATH:~-4%"=="\PTU" set "MANUAL_PATH=%MANUAL_PATH:~0,-4%"
+if /I "%MANUAL_PATH:~-5%"=="\EPTU" set "MANUAL_PATH=%MANUAL_PATH:~0,-5%"
+if /I "%MANUAL_PATH:~-7%"=="\HOTFIX" set "MANUAL_PATH=%MANUAL_PATH:~0,-7%"
+call :root_ok "%MANUAL_PATH%"
+if defined ROOT_OK goto :manual_path_ok
+echo No se encuentra ningun canal del juego ^(LIVE, HOTFIX, PTU o EPTU^) en "%MANUAL_PATH%", revisa la ruta.
 if %MANUAL_TRIES% LSS 3 goto :ask_manual_path
 goto :no_install_abort
 
@@ -133,7 +174,7 @@ echo Se han detectado %FOUND_COUNT% instalaciones de Star Citizen:
 for /l %%i in (1,1,%FOUND_COUNT%) do call :print_option %%i
 echo.
 set "CHOICE="
-set /p "CHOICE=Elige el numero de instalacion a usar (por defecto 1): "
+call :prompt CHOICE "Elige el numero de instalacion a usar (por defecto 1): "
 if "%CHOICE%"=="" set "CHOICE=1"
 call set "PICKED=%%FOUNDPATH_%CHOICE%%%"
 if defined PICKED goto :choice_valid
@@ -154,13 +195,15 @@ goto :after_detect
 :after_detect
 call :log INFO "Destino: %DEST_DIR%"
 
-REM === Verificar conexión a internet ===
-ping -n 1 github.com >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    call :log ERROR "Sin conexion a internet"
+REM === Canales donde instalar: LIVE/HOTFIX si existen; PTU/EPTU solo confirmados ===
+call :resolve_channels
+if not defined TARGETS (
+    call :log WARN "No hay canales donde instalar en %DEST_DIR% (LIVE/HOTFIX no encontrados y PTU/EPTU sin confirmar)"
+    if "%INTERACTIVE%"=="1" echo [AVISO] No hay ningun canal seleccionado donde instalar la traduccion.
     echo ======================================== >> "%LOG_FILE%"
     exit /b 0
 )
+call :log INFO "Canales de destino:%TARGETS%"
 
 REM === Obtener última release (versión) desde GitHub ===
 call :log INFO "Consultando ultima release en GitHub..."
@@ -184,31 +227,27 @@ if not defined LAST_RELEASE (
 
 call :log INFO "Ultima release remota: %LAST_RELEASE%"
 
-REM === Verificar si existen archivos de traducción en el juego ===
-set "FILES_EXIST=0"
-if exist "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)\global.ini" (
-    set "FILES_EXIST=1"
-    call :log OK "Archivos de traduccion encontrados en el juego"
+REM === Verificar si existen archivos de traducción en cada canal de destino ===
+set "MISSING="
+for %%c in (%TARGETS%) do if not exist "%DEST_DIR%\%%c\data\Localization\spanish_(spain)\global.ini" set "MISSING=!MISSING! %%c"
+if defined MISSING (
+    call :log WARN "Archivos de traduccion NO encontrados en:!MISSING!"
 ) else (
-    call :log WARN "Archivos de traduccion NO encontrados en el juego"
+    call :log OK "Archivos de traduccion encontrados en todos los canales de destino"
 )
 
 call :log INFO "Release local guardada: %LOCAL_RELEASE%"
 
 REM === Decidir si actualizar ===
-set "NEED_UPDATE=0"
-
-REM Caso 1: No hay archivos de traducción (reinstalación del juego)
-if "!FILES_EXIST!"=="0" (
-    call :log INFO "RAZON: Archivos de traduccion no encontrados, descargando..."
-    set "NEED_UPDATE=1"
+REM Caso 1: faltan archivos en algun canal (reinstalación del juego o canal recien confirmado)
+if defined MISSING (
+    call :log INFO "RAZON: faltan archivos de traduccion en:!MISSING!, descargando..."
     goto :do_update
 )
 
 REM Caso 2: Versión diferente
 if /I not "%LAST_RELEASE%"=="%LOCAL_RELEASE%" (
     call :log INFO "RAZON: Nueva version disponible (%LAST_RELEASE%)"
-    set "NEED_UPDATE=1"
     goto :do_update
 )
 
@@ -283,15 +322,17 @@ if not exist "%TEMP_DIR%\extracted\LIVE\data\Localization\spanish_(spain)\global
     exit /b 1
 )
 
-REM === Crear directorio destino si no existe ===
-if not exist "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)" (
-    call :log INFO "Creando carpeta de traduccion..."
-    mkdir "%DEST_DIR%\LIVE\data\Localization\spanish_(spain)" >nul 2>&1
-)
-
-REM === Copiar archivos ===
+REM === Copiar archivos solo a los canales de destino (antes se copiaba todo el
+REM     ZIP y se creaba una carpeta PTU aunque el usuario no la tuviera) ===
 call :log INFO "Instalando traduccion en el juego..."
-xcopy "%TEMP_DIR%\extracted\*" "%DEST_DIR%\" /E /Y /I /Q >nul
+set "COPY_FAIL="
+for %%c in (%TARGETS%) do call :install_channel %%c
+if defined COPY_FAIL (
+    call :log ERROR "No se pudo instalar la traduccion en todos los canales, se reintentara en la proxima ejecucion"
+    rd /s /q "%TEMP_DIR%" >nul 2>&1
+    echo ======================================== >> "%LOG_FILE%"
+    exit /b 1
+)
 
 REM === Guardar nuevo estado ===
 call :save_state "%LAST_RELEASE%" "%DEST_DIR%" "%ZIP_SHA256%"
@@ -353,6 +394,7 @@ mkdir "%SELF_TEMP%" >nul 2>&1
 
 set "SELF_URL_BAT=https://raw.githubusercontent.com/%SELF_OWNER%/%SELF_REPO%/v%SELF_LATEST%/UpdateStarCitizenES.bat"
 set "SELF_URL_VBS=https://raw.githubusercontent.com/%SELF_OWNER%/%SELF_REPO%/v%SELF_LATEST%/SC_Lang_updater.vbs"
+set "SELF_URL_SUMS=https://github.com/%SELF_OWNER%/%SELF_REPO%/releases/download/v%SELF_LATEST%/SHA256SUMS.txt"
 
 powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%SELF_URL_BAT%', '%SELF_TEMP%\UpdateStarCitizenES.bat'); exit 0 } catch { exit 1 }"
 if %ERRORLEVEL% neq 0 (
@@ -370,6 +412,21 @@ if %ERRORLEVEL% neq 0 (
 )
 
 powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%SELF_URL_VBS%', '%SELF_TEMP%\SC_Lang_updater.vbs') } catch {}" >nul 2>&1
+
+REM Integridad: la release publica un SHA256SUMS.txt (lo genera una GitHub Action).
+REM Si los hashes no coinciden se descarta la actualizacion. Si la release no lo
+REM publica (releases antiguas) se continua, dejando constancia en el log.
+REM Protege de descargas corruptas o truncadas; no protege frente a un
+REM repositorio comprometido, porque los hashes salen del mismo repositorio.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $c = (New-Object Net.WebClient).DownloadString('%SELF_URL_SUMS%') } catch { exit 3 }; foreach ($f in 'UpdateStarCitizenES.bat','SC_Lang_updater.vbs') { $p = Join-Path '%SELF_TEMP%' $f; if (-not (Test-Path $p)) { continue }; $m = [regex]::Match($c, '(?im)^([0-9a-f]{64})\s+\*?' + [regex]::Escape($f) + '\s*$'); if (-not $m.Success) { exit 3 }; if ((Get-FileHash $p -Algorithm SHA256).Hash -ne $m.Groups[1].Value) { exit 2 } }; exit 0" >nul 2>&1
+set "SUMS_RC=%ERRORLEVEL%"
+if "%SUMS_RC%"=="2" (
+    call :log WARN "El hash de la nueva version NO coincide con SHA256SUMS.txt, se descarta la actualizacion"
+    rd /s /q "%SELF_TEMP%" >nul 2>&1
+    goto :eof
+)
+if "%SUMS_RC%"=="0" call :log OK "Integridad de la nueva version verificada (SHA256)"
+if not "%SUMS_RC%"=="0" call :log WARN "No se pudo verificar la integridad de la nueva version: la release no publica SHA256SUMS.txt"
 
 set "RELAUNCH_ARGS="
 if "%INTERACTIVE%"=="1" set "RELAUNCH_ARGS=/interactive"
@@ -396,12 +453,8 @@ set "SELF_UPDATING=1"
 goto :eof
 
 REM Registra una instalación encontrada como FOUNDPATH_<n>
-REM %1=OK|NOLIVE (lo decide el bloque PowerShell) %2=ruta de la instalacion
+REM %1=etiqueta (OK) %2=ruta de la instalacion
 :add_found
-if /I "%~1"=="NOLIVE" (
-    call :log WARN "Instalacion sin carpeta LIVE (solo otros canales), se ignora: %~2"
-    goto :eof
-)
 set /a FOUND_COUNT+=1
 set "FOUNDPATH_%FOUND_COUNT%=%~2"
 call :log OK "Instalacion %FOUND_COUNT% encontrada: %~2"
@@ -414,12 +467,126 @@ echo   %~1^) %VAL%
 goto :eof
 
 REM Guarda el estado: %1=release instalada %2=ruta elegida %3=hash del zip
+REM (PREVIEW_ON = canales de prueba para los que el usuario acepto instalar)
 :save_state
 (
     echo RELEASE=%~1
     echo INSTALL_PATH=%~2
     echo ZIP_SHA256=%~3
+    echo PREVIEW_ON=%PREVIEW_ON%
 ) > "%STATE_FILE%"
+goto :eof
+
+REM Pregunta al usuario: %1=variable donde se guarda la respuesta %2=texto.
+REM Unico punto de entrada de teclado del script (los tests lo sustituyen).
+:prompt
+set /p "%~1=%~2"
+goto :eof
+
+REM Marca ROOT_OK si %1 tiene alguna carpeta de canal conocido (para rutas guardadas o manuales)
+:root_ok
+set "ROOT_OK="
+for %%c in (LIVE HOTFIX PTU EPTU) do if exist "%~1\%%c\" set "ROOT_OK=1"
+goto :eof
+
+REM Marca CH_OK si el canal %2 esta realmente instalado en la instalacion %1.
+REM Exige Data.p4k o StarCitizen.exe: asi se ignoran carpetas sueltas, como la
+REM PTU vacia que creaban versiones antiguas del script al copiar todo el ZIP.
+:channel_exists
+set "CH_OK="
+if exist "%~1\%~2\Data.p4k" set "CH_OK=1"
+if exist "%~1\%~2\Bin64\StarCitizen.exe" set "CH_OK=1"
+goto :eof
+
+REM Calcula TARGETS (canales donde instalar) y, en modo interactivo, pregunta por PTU/EPTU
+:resolve_channels
+set "TARGETS="
+set "NEW_ON="
+for %%c in (%CHANNELS_AUTO%) do (
+    call :channel_exists "%DEST_DIR%" %%c
+    if defined CH_OK set "TARGETS=!TARGETS! %%c"
+)
+for %%c in (%CHANNELS_PREVIEW%) do call :resolve_preview %%c
+if "%INTERACTIVE%"=="1" (
+    set "PREVIEW_ON=!NEW_ON!"
+    call :save_state "%LOCAL_RELEASE%" "%DEST_DIR%" "%SAVED_HASH%"
+)
+goto :eof
+
+REM %1=canal de pruebas (PTU/EPTU). Solo se instala si el usuario lo confirmo
+:resolve_preview
+call :channel_exists "%DEST_DIR%" %~1
+set "WAS_ON="
+set "MEM=,!PREVIEW_ON!,"
+if not "!MEM:,%~1,=!"=="!MEM!" set "WAS_ON=1"
+if not defined CH_OK (
+    REM Canal no instalado: se conserva la decision por si vuelve a instalarse
+    if defined WAS_ON call :append_new_on %~1
+    goto :eof
+)
+if "%INTERACTIVE%"=="1" goto :ask_preview
+if defined WAS_ON (
+    set "TARGETS=!TARGETS! %~1"
+    call :append_new_on %~1
+    goto :eof
+)
+call :log INFO "Canal %~1 detectado pero sin confirmar, se omite. Ejecuta InstalarAutoUpdate.bat para decidir."
+goto :eof
+
+:ask_preview
+echo.
+echo ================================================================
+echo   Canal %~1 detectado en esta instalacion
+echo ================================================================
+echo   AVISO: PTU y EPTU son versiones de pruebas con contenido nuevo
+echo   en desarrollo. La traduccion puede no incluir todavia los textos
+echo   nuevos, y es posible que veas claves sin traducir o textos en
+echo   ingles en ese canal. LIVE y HOTFIX no tienen este problema.
+echo   Si respondes N no se instalara ni se actualizara en este canal.
+echo.
+set "ANS="
+if defined WAS_ON (set "DEF=S") else set "DEF=N"
+call :prompt ANS "Instalar la traduccion tambien en %~1? (S/N) [!DEF!]: "
+if not defined ANS set "ANS=!DEF!"
+set "ANS1=!ANS:~0,1!"
+if /I "!ANS1!"=="S" goto :preview_yes
+if /I "!ANS1!"=="Y" goto :preview_yes
+call :log INFO "Canal %~1: el usuario decidio no instalar la traduccion"
+goto :eof
+
+:preview_yes
+set "TARGETS=!TARGETS! %~1"
+call :append_new_on %~1
+call :log OK "Canal %~1: el usuario acepto instalar la traduccion"
+goto :eof
+
+REM Añade el canal %1 a la lista NEW_ON (canales de prueba aceptados)
+:append_new_on
+if defined NEW_ON (
+    set "NEW_ON=!NEW_ON!,%~1"
+) else (
+    set "NEW_ON=%~1"
+)
+goto :eof
+
+REM Copia la traduccion al canal %1. Origen: LIVE y HOTFIX usan los textos de
+REM LIVE; PTU y EPTU usan los de PTU (el ZIP trae un global.ini distinto).
+:install_channel
+set "SRC=LIVE"
+if /I "%~1"=="PTU" set "SRC=PTU"
+if /I "%~1"=="EPTU" set "SRC=PTU"
+if not exist "%TEMP_DIR%\extracted\%SRC%\data\Localization\spanish_(spain)\global.ini" (
+    call :log WARN "El ZIP no trae traduccion especifica de %SRC% para %~1, se usa la de LIVE"
+    set "SRC=LIVE"
+)
+if not exist "%DEST_DIR%\%~1\data\Localization\spanish_(spain)" mkdir "%DEST_DIR%\%~1\data\Localization\spanish_(spain)" >nul 2>&1
+xcopy "%TEMP_DIR%\extracted\%SRC%\*" "%DEST_DIR%\%~1\" /E /Y /I /Q >nul
+if errorlevel 1 (
+    call :log ERROR "Fallo al copiar la traduccion en el canal %~1"
+    set "COPY_FAIL=1"
+) else (
+    call :log OK "Traduccion instalada en el canal %~1 (origen: %SRC%)"
+)
 goto :eof
 
 :log
@@ -430,10 +597,13 @@ REM Seguridad: cmd nunca debe leer el bloque PowerShell de abajo como comandos.
 exit /b 0
 
 #PS_BEGIN
-# Deteccion de instalaciones de Star Citizen. Imprime una linea TAG|ruta por
-# instalacion: OK si tiene carpeta LIVE, NOLIVE si solo tiene otros canales.
+# Deteccion de instalaciones de Star Citizen. Imprime una linea OK|ruta por
+# instalacion. Una instalacion es valida si tiene al menos un canal LIVE, HOTFIX,
+# PTU o EPTU; en cuales se instala la traduccion lo decide el .bat.
+# SC_TEST_ROOTS (rutas separadas por ;) solo existe para los tests: sustituye a
+# los discos reales.
 $ErrorActionPreference = 'SilentlyContinue'
-$channels = 'LIVE','PTU','EPTU','HOTFIX','TECH-PREVIEW'
+$channels = 'LIVE','HOTFIX','PTU','EPTU'
 $seen = New-Object 'System.Collections.Generic.HashSet[string]'
 $state = @{ ok = 0 }
 
@@ -442,7 +612,7 @@ function Test-Marker([string]$dir) {
 }
 
 # $strict: exige Data.p4k o StarCitizen.exe en algun canal (evita carpetas vacias
-# o restos, como un C:\StarCitizen\LIVE creado a mano por versiones antiguas).
+# o restos, como el C:\StarCitizen\LIVE o la PTU vacia que creaban versiones antiguas).
 function Add-Root([string]$p, [bool]$strict) {
     if (-not $p) { return }
     $p = ($p -replace '\\{2,}', '\').Trim().TrimEnd('\')
@@ -451,8 +621,8 @@ function Add-Root([string]$p, [bool]$strict) {
     if ($ch.Count -eq 0) { return }
     if ($strict -and -not ($ch | Where-Object { Test-Marker "$p\$_" })) { return }
     [void]$seen.Add($p.ToLower())
-    $tag = if ($ch -contains 'LIVE') { $state.ok++; 'OK' } else { 'NOLIVE' }
-    "$tag|$p"
+    $state.ok++
+    "OK|$p"
 }
 
 # 1) Log del RSI Launcher: registra la ruta real con la que lanza el juego
@@ -470,15 +640,22 @@ foreach ($f in 'log.log','log.old.log') {
     }
 }
 
-$drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -in 'Fixed','Removable','Network' })
+if ($env:SC_TEST_ROOTS) {
+    $knownRoots = @($env:SC_TEST_ROOTS -split ';' | Where-Object { $_ })
+    $scanRoots = $knownRoots
+} else {
+    $drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -in 'Fixed','Removable','Network' })
+    $knownRoots = @($drives | ForEach-Object { $_.RootDirectory.FullName })
+    $scanRoots = @($drives | Where-Object { $_.DriveType -ne 'Network' } | ForEach-Object { $_.RootDirectory.FullName })
+}
 
 # 2) Rutas conocidas en todos los discos
 $known = 'Program Files\Roberts Space Industries\StarCitizen',
          'Program Files (x86)\Roberts Space Industries\StarCitizen',
          'StarCitizen', 'Roberts Space Industries\StarCitizen',
          'Games\StarCitizen', 'Games\Roberts Space Industries\StarCitizen'
-foreach ($d in $drives) {
-    foreach ($k in $known) { Add-Root (Join-Path $d.RootDirectory.FullName $k) $true }
+foreach ($root in $knownRoots) {
+    foreach ($k in $known) { Add-Root (Join-Path $root $k) $true }
 }
 
 # 3) Escaneo acotado (cuatro niveles) buscando carpetas llamadas StarCitizen.
@@ -486,9 +663,9 @@ foreach ($d in $drives) {
 #    Solo si lo anterior no encontro ninguna: es la parte lenta (~15 s en C:).
 if ($state.ok -eq 0) {
     $skip = '^(Windows|\$Recycle\.Bin|System Volume Information|ProgramData|AppData|Recovery|PerfLogs|WinSxS|node_modules|\..*)$'
-    foreach ($d in ($drives | Where-Object { $_.DriveType -ne 'Network' })) {
+    foreach ($root in $scanRoots) {
         $queue = New-Object System.Collections.Queue
-        $queue.Enqueue(@($d.RootDirectory.FullName, 0))
+        $queue.Enqueue(@($root, 0))
         while ($queue.Count -gt 0) {
             $item = $queue.Dequeue()
             try { $subs = [IO.Directory]::EnumerateDirectories($item[0]) } catch { continue }

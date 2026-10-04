@@ -1,0 +1,26 @@
+name: Release checksums
+
+# Al publicar una release adjunta SHA256SUMS.txt con los hashes de los scripts que
+# descargan el instalador y la autoactualizacion. El script los verifica antes de
+# aplicar una actualizacion (descarta descargas corruptas o truncadas).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  checksums:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: Calcular SHA256SUMS.txt
+        run: sha256sum UpdateStarCitizenES.bat SC_Lang_updater.vbs > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Adjuntar a la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" SHA256SUMS.txt --clobber

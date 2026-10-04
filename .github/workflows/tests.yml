@@ -1,0 +1,15 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ejecutar tests
+        shell: powershell
+        run: .\tests\run-all.ps1
