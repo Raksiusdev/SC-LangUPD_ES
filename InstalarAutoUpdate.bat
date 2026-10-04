@@ -32,8 +32,10 @@ set "SCRIPT_LAUNCHER=SC_Lang_updater.vbs"
 set "SCRIPT_DIR=C:\Scripts"
 set "SCRIPT_PATH1=%SCRIPT_DIR%\%SCRIPT_NAME%"
 set "SCRIPT_PATH2=%SCRIPT_DIR%\%SCRIPT_LAUNCHER%"
-set "GITHUB_URL1=https://raw.githubusercontent.com/%GITHUB_OWNER%/%GITHUB_REPO%/main/%SCRIPT_NAME%"
-set "GITHUB_URL2=https://raw.githubusercontent.com/%GITHUB_OWNER%/%GITHUB_REPO%/main/%SCRIPT_LAUNCHER%"
+REM De donde se descargan los scripts: "release" = tag de la ultima release
+REM publicada (igual que la auto-actualizacion del propio script, no commits sueltos
+REM de main). Para probar una rama sin publicar, cambia "release" por su nombre (dev).
+set "SCRIPT_REF=release"
 
 REM === Verificar conexión a internet ===
 echo [1/4] Verificando conexión a internet...
@@ -54,14 +56,19 @@ echo.
 
 REM === Descargar script desde GitHub ===
 echo [3/4] Descargando script desde GitHub...
-echo      %GITHUB_URL1%
-echo      %GITHUB_URL2%
 echo.
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "try { " ^
-    "    (New-Object Net.WebClient).DownloadFile('%GITHUB_URL1%', '%SCRIPT_PATH1%'); " ^
-    "    (New-Object Net.WebClient).DownloadFile('%GITHUB_URL2%', '%SCRIPT_PATH2%'); " ^
+    "    $ref = '%SCRIPT_REF%'; " ^
+    "    if ($ref -eq 'release') { " ^
+    "        $h = @{'User-Agent' = 'StarCitizenES-Installer'}; " ^
+    "        $ref = (Invoke-RestMethod -Uri 'https://api.github.com/repos/%GITHUB_OWNER%/%GITHUB_REPO%/releases/latest' -Headers $h -ErrorAction Stop).tag_name; " ^
+    "    } " ^
+    "    $base = 'https://raw.githubusercontent.com/%GITHUB_OWNER%/%GITHUB_REPO%/' + $ref + '/'; " ^
+    "    Write-Host ('     Version: ' + $ref); " ^
+    "    (New-Object Net.WebClient).DownloadFile($base + '%SCRIPT_NAME%', '%SCRIPT_PATH1%'); " ^
+    "    (New-Object Net.WebClient).DownloadFile($base + '%SCRIPT_LAUNCHER%', '%SCRIPT_PATH2%'); " ^
     "    Write-Host '[OK] Descarga completada' -ForegroundColor Green; " ^
     "    exit 0; " ^
     "} catch { " ^
@@ -72,9 +79,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 if %errorLevel% neq 0 (
     echo.
     echo [ERROR] No se pudo descargar el script
-    echo         Verifica que el repositorio es público y el archivo existe:
-    echo         %GITHUB_URL1%
-    echo         %GITHUB_URL2%
+    echo         Verifica que el repositorio es público, que existe al menos una
+    echo         release publicada y que los archivos existen en ella:
+    echo         https://github.com/%GITHUB_OWNER%/%GITHUB_REPO%/releases
     pause
     exit /b 1
 )
