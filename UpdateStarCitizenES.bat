@@ -35,7 +35,12 @@ echo Inicio: %DATE% %TIME% >> "%LOG_FILE%"
 echo ========================================>> "%LOG_FILE%"
 
 REM === Comprobar si hay una nueva version del propio script publicada ===
+set "SELF_UPDATING="
 call :selfupdate_check
+REM Si se lanzo el helper de auto-actualizacion, ESTE proceso debe terminar ya:
+REM un "exit /b" dentro de la subrutina solo vuelve aqui, y seguir ejecutando
+REM mientras el helper sobrescribe este archivo corrompe la ejecucion.
+if defined SELF_UPDATING exit /b 0
 
 REM === Cargar estado guardado (release instalada, instalacion elegida, hash del zip) ===
 set "LOCAL_RELEASE=none"
@@ -49,12 +54,21 @@ if exist "%STATE_FILE%" (
     )
 )
 
-REM === Buscar TODAS las instalaciones de Star Citizen en TODOS los discos ===
+REM === Buscar TODAS las instalaciones de Star Citizen ===
+REM La deteccion vive en el bloque PowerShell del final de este archivo y
+REM mira, por orden: log del RSI Launcher, rutas conocidas y un escaneo
+REM acotado de los discos. Cada linea que devuelve es TAG|ruta.
 set "FOUND_COUNT=0"
-call :log INFO "Buscando instalaciones de Star Citizen en todos los discos..."
-for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do call :check_drive %%d
+REM Con una ruta guardada valida no hace falta detectar nada (ejecuciones silenciosas)
+if not defined SAVED_PATH goto :detect_installs
+if exist "%SAVED_PATH%\LIVE" goto :pick_install
+
+:detect_installs
+call :log INFO "Buscando instalaciones de Star Citizen (launcher, rutas conocidas y escaneo de discos)..."
+for /f "usebackq tokens=1,* delims=|" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=[IO.File]::ReadAllText('%~f0',[Text.Encoding]::UTF8); $i=$s.IndexOf('#PS_'+'BEGIN'); & ([scriptblock]::Create($s.Substring($i)))"`) do call :add_found "%%a" "%%b"
 call :log INFO "Instalaciones encontradas: %FOUND_COUNT%"
 
+:pick_install
 REM === Elegir instalación destino ===
 set "DEST_DIR="
 
@@ -73,9 +87,38 @@ if %FOUND_COUNT% EQU 1 goto :single_install_found
 goto :multiple_installs_found
 
 :no_installs_found
-set "DEST_DIR=C:\StarCitizen"
-call :log WARN "No se encontro Star Citizen, usando ruta por defecto"
+call :log WARN "No se encontro Star Citizen automaticamente"
+if not "%INTERACTIVE%"=="1" goto :no_install_abort
+echo.
+echo No se ha encontrado Star Citizen automaticamente.
+echo Indica la carpeta de instalacion: la que contiene la carpeta LIVE
+echo ^(ejemplo: D:\Roberts Space Industries\StarCitizen^)
+set "MANUAL_TRIES=0"
+
+:ask_manual_path
+set /a MANUAL_TRIES+=1
+set "MANUAL_PATH="
+set /p "MANUAL_PATH=Ruta (vacio para cancelar): "
+if not defined MANUAL_PATH goto :no_install_abort
+set "MANUAL_PATH=%MANUAL_PATH:"=%"
+if "%MANUAL_PATH:~-1%"=="\" set "MANUAL_PATH=%MANUAL_PATH:~0,-1%"
+if /I "%MANUAL_PATH:~-5%"=="\LIVE" set "MANUAL_PATH=%MANUAL_PATH:~0,-5%"
+if exist "%MANUAL_PATH%\LIVE\" goto :manual_path_ok
+echo No existe la carpeta "%MANUAL_PATH%\LIVE", revisa la ruta.
+if %MANUAL_TRIES% LSS 3 goto :ask_manual_path
+goto :no_install_abort
+
+:manual_path_ok
+set "DEST_DIR=%MANUAL_PATH%"
+call :save_state "%LOCAL_RELEASE%" "%DEST_DIR%" "%SAVED_HASH%"
+call :log OK "Ruta indicada manualmente por el usuario: %DEST_DIR%"
 goto :after_detect
+
+:no_install_abort
+call :log ERROR "No se encontro la carpeta de Star Citizen, no se instala nada. Ejecuta InstalarAutoUpdate.bat como administrador para indicar la ruta a mano."
+if "%INTERACTIVE%"=="1" echo [ERROR] No se ha configurado ninguna ruta de Star Citizen. No se ha instalado nada.
+echo ======================================== >> "%LOG_FILE%"
+exit /b 1
 
 :single_install_found
 set "DEST_DIR=%FOUNDPATH_1%"
@@ -270,6 +313,13 @@ REM sobrescribir %~f0 y seguir ejecutando lineas de ESTE MISMO proceso -
 REM cmd.exe sigue leyendo el archivo por offset de bytes y si el contenido
 REM cambia bajo sus pies el resto de la ejecucion se corrompe (verificado).
 :selfupdate_check
+REM Proteccion anti-bucle: el helper relanza el script ya actualizado con esta
+REM variable puesta. Si la release publicada conservara SCRIPT_VERSION=dev (o
+REM cualquier valor distinto de su tag), sin esto se actualizaria sin fin.
+if defined SC_SELFUPDATED (
+    call :log INFO "Script recien auto-actualizado, se omite una segunda comprobacion"
+    goto :eof
+)
 set "SELF_LATEST="
 for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$uri = 'https://api.github.com/repos/%SELF_OWNER%/%SELF_REPO%/releases/latest'; " ^
@@ -335,28 +385,26 @@ set "APPLY_HELPER=%SELF_TEMP%\_apply_update.bat"
     echo copy /y "%SELF_TEMP%\UpdateStarCitizenES.bat" "%~f0" ^>nul
     echo if exist "%SELF_TEMP%\SC_Lang_updater.vbs" copy /y "%SELF_TEMP%\SC_Lang_updater.vbs" "%~dp0SC_Lang_updater.vbs" ^>nul
     echo echo [%%TIME%%] [OK] Script actualizado a la version %SELF_LATEST%, relanzando...^>^>"%LOG_FILE%"
+    echo set "SC_SELFUPDATED=1"
     echo call "%~f0" %RELAUNCH_ARGS%
     echo rd /s /q "%SELF_TEMP%" ^>nul 2^>^&1
     echo del "%%~f0"
 ) > "%APPLY_HELPER%"
 
 start "" /min cmd /c "%APPLY_HELPER%"
-exit /b 0
-
-REM Comprueba las rutas conocidas de Star Citizen en el disco %1
-:check_drive
-if not exist "%~1:\" goto :eof
-if exist "%~1:\Program Files\Roberts Space Industries\StarCitizen\LIVE" call :add_found "%~1:\Program Files\Roberts Space Industries\StarCitizen"
-if exist "%~1:\StarCitizen\LIVE" call :add_found "%~1:\StarCitizen"
-if exist "%~1:\Roberts Space Industries\StarCitizen\LIVE" call :add_found "%~1:\Roberts Space Industries\StarCitizen"
-if exist "%~1:\Games\StarCitizen\LIVE" call :add_found "%~1:\Games\StarCitizen"
+set "SELF_UPDATING=1"
 goto :eof
 
 REM Registra una instalación encontrada como FOUNDPATH_<n>
+REM %1=OK|NOLIVE (lo decide el bloque PowerShell) %2=ruta de la instalacion
 :add_found
+if /I "%~1"=="NOLIVE" (
+    call :log WARN "Instalacion sin carpeta LIVE (solo otros canales), se ignora: %~2"
+    goto :eof
+)
 set /a FOUND_COUNT+=1
-set "FOUNDPATH_%FOUND_COUNT%=%~1"
-call :log OK "Instalacion %FOUND_COUNT% encontrada: %~1"
+set "FOUNDPATH_%FOUND_COUNT%=%~2"
+call :log OK "Instalacion %FOUND_COUNT% encontrada: %~2"
 goto :eof
 
 REM Imprime "  N) ruta" para el menú interactivo
@@ -377,3 +425,80 @@ goto :eof
 :log
 echo [%TIME%] [%~1] %~2>> "%LOG_FILE%"
 goto :eof
+
+REM Seguridad: cmd nunca debe leer el bloque PowerShell de abajo como comandos.
+exit /b 0
+
+#PS_BEGIN
+# Deteccion de instalaciones de Star Citizen. Imprime una linea TAG|ruta por
+# instalacion: OK si tiene carpeta LIVE, NOLIVE si solo tiene otros canales.
+$ErrorActionPreference = 'SilentlyContinue'
+$channels = 'LIVE','PTU','EPTU','HOTFIX','TECH-PREVIEW'
+$seen = New-Object 'System.Collections.Generic.HashSet[string]'
+$state = @{ ok = 0 }
+
+function Test-Marker([string]$dir) {
+    (Test-Path -LiteralPath "$dir\Data.p4k") -or (Test-Path -LiteralPath "$dir\Bin64\StarCitizen.exe")
+}
+
+# $strict: exige Data.p4k o StarCitizen.exe en algun canal (evita carpetas vacias
+# o restos, como un C:\StarCitizen\LIVE creado a mano por versiones antiguas).
+function Add-Root([string]$p, [bool]$strict) {
+    if (-not $p) { return }
+    $p = ($p -replace '\\{2,}', '\').Trim().TrimEnd('\')
+    if ($seen.Contains($p.ToLower())) { return }
+    $ch = @($channels | Where-Object { Test-Path -LiteralPath "$p\$_" -PathType Container })
+    if ($ch.Count -eq 0) { return }
+    if ($strict -and -not ($ch | Where-Object { Test-Marker "$p\$_" })) { return }
+    [void]$seen.Add($p.ToLower())
+    $tag = if ($ch -contains 'LIVE') { $state.ok++; 'OK' } else { 'NOLIVE' }
+    "$tag|$p"
+}
+
+# 1) Log del RSI Launcher: registra la ruta real con la que lanza el juego
+#    (p.ej. "Launching Star Citizen PTU from (D:\\Juegos\\StarCitizen\\PTU)").
+#    Se lee de lo mas reciente a lo mas antiguo.
+$rx = '([A-Za-z]:\\{1,2}[^"<>|?*]+?)\\{1,2}(?:LIVE|PTU|EPTU|HOTFIX|TECH-PREVIEW)(?=["\\/)\s,]|$)'
+foreach ($f in 'log.log','log.old.log') {
+    $file = Join-Path $env:APPDATA "rsilauncher\logs\$f"
+    if (-not (Test-Path -LiteralPath $file)) { continue }
+    $lines = @(Get-Content -LiteralPath $file -ErrorAction SilentlyContinue)
+    [array]::Reverse($lines)
+    foreach ($line in $lines) {
+        if ($line -notmatch 'StarCitizen') { continue }
+        foreach ($m in [regex]::Matches($line, $rx)) { Add-Root $m.Groups[1].Value $false }
+    }
+}
+
+$drives = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -in 'Fixed','Removable','Network' })
+
+# 2) Rutas conocidas en todos los discos
+$known = 'Program Files\Roberts Space Industries\StarCitizen',
+         'Program Files (x86)\Roberts Space Industries\StarCitizen',
+         'StarCitizen', 'Roberts Space Industries\StarCitizen',
+         'Games\StarCitizen', 'Games\Roberts Space Industries\StarCitizen'
+foreach ($d in $drives) {
+    foreach ($k in $known) { Add-Root (Join-Path $d.RootDirectory.FullName $k) $true }
+}
+
+# 3) Escaneo acotado (cuatro niveles) buscando carpetas llamadas StarCitizen.
+#    Cubre bibliotecas personalizadas del launcher (D:\Juegos\RSI\StarCitizen...).
+#    Solo si lo anterior no encontro ninguna: es la parte lenta (~15 s en C:).
+if ($state.ok -eq 0) {
+    $skip = '^(Windows|\$Recycle\.Bin|System Volume Information|ProgramData|AppData|Recovery|PerfLogs|WinSxS|node_modules|\..*)$'
+    foreach ($d in ($drives | Where-Object { $_.DriveType -ne 'Network' })) {
+        $queue = New-Object System.Collections.Queue
+        $queue.Enqueue(@($d.RootDirectory.FullName, 0))
+        while ($queue.Count -gt 0) {
+            $item = $queue.Dequeue()
+            try { $subs = [IO.Directory]::EnumerateDirectories($item[0]) } catch { continue }
+            try {
+                foreach ($sub in $subs) {
+                    $name = [IO.Path]::GetFileName($sub)
+                    if ($name -match '^Star ?Citizen$') { Add-Root $sub $true; continue }
+                    if ($item[1] -lt 3 -and $name -notmatch $skip) { $queue.Enqueue(@($sub, ($item[1] + 1))) }
+                }
+            } catch { }
+        }
+    }
+}
