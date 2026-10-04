@@ -113,16 +113,27 @@ Instalando archivos...
 
 ## 🔍 ¿Dónde Busca Star Citizen?
 
-El script busca **automáticamente** en todos los discos (C: a Z:) en estas ubicaciones:
+El script detecta la instalación **automáticamente**, por capas, y se queda con todas las que encuentre:
 
-```
-✓ [Disco]:\Program Files\Roberts Space Industries\StarCitizen\
-✓ [Disco]:\StarCitizen\
-✓ [Disco]:\Roberts Space Industries\StarCitizen\
-✓ [Disco]:\Games\StarCitizen\
-```
+1. **Log del RSI Launcher** (`%APPDATA%\rsilauncher\logs`): el launcher registra la ruta real con la que lanza el juego, así que cubre bibliotecas en cualquier carpeta o disco.
+2. **Rutas habituales** en todos los discos:
+   ```
+   ✓ [Disco]:\Program Files\Roberts Space Industries\StarCitizen\
+   ✓ [Disco]:\Program Files (x86)\Roberts Space Industries\StarCitizen\
+   ✓ [Disco]:\StarCitizen\
+   ✓ [Disco]:\Roberts Space Industries\StarCitizen\
+   ✓ [Disco]:\Games\StarCitizen\
+   ✓ [Disco]:\Games\Roberts Space Industries\StarCitizen\
+   ```
+3. **Escaneo de discos** (hasta 4 niveles de carpetas, solo si lo anterior no encontró nada) buscando carpetas llamadas `StarCitizen`.
 
-**No necesitas configurar nada** - el script detecta la instalación automáticamente.
+Una carpeta solo cuenta como instalación si contiene un canal del juego (`LIVE`, `PTU`, `EPTU`, `HOTFIX` o `TECH-PREVIEW`) con `Data.p4k` o `Bin64\StarCitizen.exe` (o si el propio launcher indica que ha lanzado el juego desde ahí). Si una instalación solo tiene canales distintos de `LIVE` (por ejemplo solo `PTU`) se ignora y queda constancia en el log, porque la traducción se instala en `LIVE`.
+
+Una vez elegida una instalación se guarda en `Star_citizen_ES_state.txt` y las siguientes ejecuciones ya no vuelven a buscar.
+
+**Si no se encuentra nada**, el instalador te pide la ruta a mano (la carpeta que contiene `LIVE`, por ejemplo `D:\Juegos\StarCitizen`) y la guarda. Las ejecuciones en segundo plano **no instalan nada** si no hay ruta: lo dejan escrito en el log en vez de crear carpetas por defecto.
+
+> Nota: el log del launcher se lee del usuario que ejecuta el script. Si ejecutas el instalador con otra cuenta de administrador, esa fuente no estará disponible y se usarán las otras dos.
 
 ### ¿Tienes el juego instalado más de una vez?
 
@@ -295,7 +306,7 @@ Esto no toca `main` ni publica nada — es solo una copia local apuntando a otra
 
 ### ¿Detecta automáticamente dónde tengo el juego?
 
-**Sí.** El script busca en todos los discos (C: a Z:) en las ubicaciones más comunes de Star Citizen.
+**Sí.** Usa el log del RSI Launcher, las ubicaciones más comunes en todos los discos y, si hace falta, un escaneo de los discos. Si no encuentra nada, el instalador te pide la ruta (ver [¿Dónde busca Star Citizen?](#-dónde-busca-star-citizen)).
 
 ### ¿Qué pasa si ya está actualizado?
 
@@ -349,20 +360,13 @@ Simplemente vuelve a ejecutar el instalador. Recreará todo desde cero.
 
 ### No encuentra Star Citizen
 
-**Causa:** Instalación en ubicación no estándar
+**Causa:** Instalación en ubicación no estándar, o solo con un canal distinto de `LIVE` (p. ej. únicamente `PTU`).
 
 **Solución:**
-1. Abre `C:\Scripts\UpdateStarCitizenES.bat` con el Bloc de notas
-2. Busca la sección de búsqueda de discos
-3. Añade tu ubicación personalizada:
-
-```batch
-if exist "X:\TuRuta\StarCitizen\LIVE" (
-    set "DEST_DIR=X:\TuRuta\StarCitizen"
-    call :log OK "Encontrado en X:\TuRuta"
-    goto :found
-)
-```
+1. Ejecuta de nuevo `InstalarAutoUpdate.bat` como administrador.
+2. Si no detecta el juego, te pedirá la ruta: indica la carpeta que contiene `LIVE` (por ejemplo `D:\Juegos\StarCitizen`).
+3. Si el juego solo tiene `PTU`, ejecuta `LIVE` al menos una vez desde el launcher para que exista esa carpeta.
+4. Revisa `%USERPROFILE%\Star_citizen_ES_update_log.txt` para ver qué rutas ha encontrado o descartado.
 
 ### Error "No se pudo obtener la versión de GitHub"
 
