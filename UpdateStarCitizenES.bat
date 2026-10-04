@@ -26,7 +26,7 @@ set "NET_RETRY_SECS=10"
 
 REM === Auto-actualizacion del propio script (contra releases de este repo,
 REM     no commits de main, para no desplegar cambios sin marcar como listos) ===
-set "SCRIPT_VERSION=0.3.0"
+set "SCRIPT_VERSION=0.4.0"
 set "SELF_OWNER=Raksiusdev"
 set "SELF_REPO=SC-LangUPD_ES"
 
