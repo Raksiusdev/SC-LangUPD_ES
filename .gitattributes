@@ -1,0 +1,5 @@
+# Los scripts se sirven tal cual (CRLF): el SHA256 que publica la release debe
+# coincidir con lo que descargan los usuarios desde raw.githubusercontent.com,
+# y un .bat con saltos de linea LF puede romper etiquetas y goto en cmd.exe.
+*.bat -text
+*.vbs -text
