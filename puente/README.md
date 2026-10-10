@@ -40,7 +40,19 @@ por `bridge-` y cuya descripción tenga una línea `BASE=<tag de la última rele
        --notes $'Traducción de Thord (LIVE 4.10.1) + textos nuevos de StarStrings 4.10.2.\nBASE=v.4.10.10.00'
    ```
 
-   `BASE` debe ser el tag **exacto** de la última release de Thord en ese momento.
+   `BASE` debe ser el tag **exacto** de la última release de Thord en ese momento, y `SS` el build
+   de StarStrings del que sale el puente (lo usa el vigilante): añade ambas líneas a `--notes`
+   (`BASE=v.4.10.10.00` y `SS=sc-alpha-4.10.2_live_12881860`).
+
+## Vigilante
+
+`.github/workflows/vigilante.yml` ejecuta `puente/vigilante.py` cada 6 horas (y a mano desde la
+pestaña Actions). Abre un issue con la etiqueta `vigilante` cuando:
+
+* StarStrings publica un build más nuevo que el de Thord y que el del puente → regenerar el puente.
+* Thord publica una release posterior a la `BASE` del puente → revisar `revision.csv` y archivar el puente.
+
+No traduce ni publica nada y no duplica issues. Prueba local: `python puente/vigilante.py --dry-run`.
 
 ## Contenido de `4.10.2/`
 

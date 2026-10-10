@@ -1,0 +1,23 @@
+name: Vigilante de la traducción puente
+
+# Avisa (abriendo un issue) cuando StarStrings saca un build que Thord aún no cubre,
+# o cuando Thord publica algo posterior a la base del puente. No traduce ni publica nada.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar y avisar
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 puente/vigilante.py
