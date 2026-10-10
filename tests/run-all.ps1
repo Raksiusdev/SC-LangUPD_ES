@@ -2,7 +2,7 @@
 #   -SinRed  omite los tests de flujos completos (necesitan internet para descargar la traduccion)
 param([switch]$SinRed)
 
-$tests = @('Test-Detection.ps1', 'Test-SelfUpdateIntegrity.ps1')
+$tests = @('Test-Detection.ps1', 'Test-SelfUpdateIntegrity.ps1', 'Test-Log.ps1', 'Test-Bridge.ps1')
 if (-not $SinRed) { $tests += 'Test-Flows.ps1' }
 
 $failed = @()

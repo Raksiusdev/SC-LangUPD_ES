@@ -115,4 +115,58 @@ Assert (Test-Path -LiteralPath (Get-Ini $inst2 'LIVE')) 'instala en LIVE'
 Assert (-not (Test-Path -LiteralPath (Join-Path $inst2 'PTU'))) 'no crea carpeta PTU (antes se copiaba todo el ZIP)'
 Assert ($r.State -match [regex]::Escape("INSTALL_PATH=$inst2") + '\r?\n') 'guarda la ruta sin el sufijo \LIVE ni comillas'
 
+# ------------------------------------------------------------------------------
+Write-Host "== Traduccion puente: se usa mientras su BASE sea la ultima release de Thord"
+$thordTag = ((Invoke-RestMethod 'https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest' -Headers @{ 'User-Agent' = 'sc-tests' }).tag_name) -replace '^v\.?', ''
+$bridgeZip = Join-Path $t 'puente.zip'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zf = [IO.Compression.ZipFile]::Open($bridgeZip, 'Create')
+foreach ($e in 'LIVE/data/Localization/spanish_(spain)/global.ini') {
+    $en = $zf.CreateEntry($e); $sw = New-Object IO.StreamWriter($en.Open()); $sw.Write("marcador=PUENTE`r`n"); $sw.Dispose()
+}
+$rnd = New-Object byte[] 4096; (New-Object Random 1).NextBytes($rnd)
+$en = $zf.CreateEntry('LIVE/relleno.bin', 'NoCompression'); $st = $en.Open(); $st.Write($rnd, 0, $rnd.Length); $st.Dispose()
+$zf.Dispose()
+$bridgeSha = (Get-FileHash $bridgeZip -Algorithm SHA256).Hash
+function Set-BridgeJson([string]$base, [string]$sha) {
+    $rel = [ordered]@{ tag_name = 'bridge-test-1'; prerelease = $true; draft = $false; body = "BASE=v.$base"
+        assets = @([ordered]@{ name = 'Star_citizen_ES.zip'; browser_download_url = ([Uri]$bridgeZip).AbsoluteUri; digest = "sha256:$sha" }) }
+    $f = Join-Path $t 'puente.json'
+    [IO.File]::WriteAllText($f, (ConvertTo-Json @($rel) -Depth 6))
+    $env:SC_BRIDGE_JSON = $f
+}
+try {
+    $instB = Join-Path $t 'puente\StarCitizen'
+    New-FakeInstall $instB @('LIVE')
+    Set-BridgeJson $thordTag $bridgeSha
+    $r = Invoke-Flow 'puente' '/interactive' @("`"$instB`"") @($emptyRoot)
+    Assert ($r.Code -eq 0) 'termina bien'
+    Assert ($r.Log -match 'Traduccion puente disponible: bridge-test-1') 'detecta el puente y lo deja en el log'
+    Assert ([IO.File]::ReadAllText((Get-Ini $instB 'LIVE')) -match 'marcador=PUENTE') 'instala el global.ini del puente, no el de Thord'
+    Assert ($r.State -match 'RELEASE=bridge-test-1\r?\n') 'guarda el tag del puente como version instalada'
+    $r = Invoke-Flow 'puente' '' @() @($emptyRoot)
+    Assert ($r.Log -match 'Ya actualizado \(version bridge-test-1\)') 'la siguiente ejecucion no vuelve a descargar'
+
+    Write-Host "== Traduccion puente: hash que no coincide"
+    $instH = Join-Path $t 'puente-hash\StarCitizen'
+    New-FakeInstall $instH @('LIVE')
+    Set-BridgeJson $thordTag ('0' * 64)
+    $r = Invoke-Flow 'puente-hash' '/interactive' @("`"$instH`"") @($emptyRoot)
+    Assert ($r.Code -eq 1) 'aborta con codigo 1'
+    Assert ($r.Log -match 'hash del zip puente no coincide') 'lo deja escrito en el log'
+    Assert (-not (Test-Path -LiteralPath (Get-Ini $instH 'LIVE'))) 'no toca la instalacion'
+
+    Write-Host "== Traduccion puente: Thord ya publico algo posterior (BASE distinta)"
+    $instT = Join-Path $t 'puente-thord\StarCitizen'
+    New-FakeInstall $instT @('LIVE')
+    Set-BridgeJson '0.0.0.0' $bridgeSha
+    $r = Invoke-Flow 'puente-thord' '/interactive' @("`"$instT`"") @($emptyRoot)
+    Assert ($r.Code -eq 0) 'termina bien'
+    Assert ($r.Log -notmatch 'Traduccion puente disponible') 'ignora el puente'
+    Assert (([IO.FileInfo](Get-Ini $instT 'LIVE')).Length -gt 1000000) 'instala la traduccion de Thord'
+    Assert ($r.State -match "RELEASE=$([regex]::Escape($thordTag))\r?\n") 'guarda el tag de Thord'
+} finally {
+    $env:SC_BRIDGE_JSON = $null
+}
+
 Finish-Tests
