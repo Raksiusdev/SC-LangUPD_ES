@@ -26,7 +26,7 @@ set "NET_RETRY_SECS=10"
 
 REM === Auto-actualizacion del propio script (contra releases de este repo,
 REM     no commits de main, para no desplegar cambios sin marcar como listos) ===
-set "SCRIPT_VERSION=0.4.0"
+set "SCRIPT_VERSION=0.4.1"
 set "SELF_OWNER=Raksiusdev"
 set "SELF_REPO=SC-LangUPD_ES"
 
@@ -80,7 +80,7 @@ set "SAVED_PATH="
 set "SAVED_HASH="
 set "PREVIEW_ON="
 if exist "%STATE_FILE%" (
-    for /f "usebackq tokens=1,2 delims==" %%k in ("%STATE_FILE%") do (
+    for /f "usebackq tokens=1,* delims==" %%k in ("%STATE_FILE%") do (
         if /I "%%k"=="RELEASE" set "LOCAL_RELEASE=%%l"
         if /I "%%k"=="INSTALL_PATH" set "SAVED_PATH=%%l"
         if /I "%%k"=="ZIP_SHA256" set "SAVED_HASH=%%l"
@@ -183,7 +183,7 @@ set "PICKED=%FOUNDPATH_1%"
 :choice_valid
 set "DEST_DIR=%PICKED%"
 call :save_state "%LOCAL_RELEASE%" "%DEST_DIR%" "%SAVED_HASH%"
-echo Instalacion seleccionada: %DEST_DIR%
+echo Instalacion seleccionada: !DEST_DIR!
 call :log OK "Instalacion elegida por el usuario: %DEST_DIR%"
 goto :after_detect
 
@@ -226,6 +226,28 @@ if not defined LAST_RELEASE (
 )
 
 call :log INFO "Ultima release remota: %LAST_RELEASE%"
+
+REM === Traduccion puente: mientras Thord no publique nada posterior al parche del
+REM     juego, este repo publica (pre-release "bridge-*") su traduccion + los textos
+REM     nuevos. Solo se usa si su BASE coincide con la ultima release de Thord; en
+REM     cuanto Thord publica otra, el puente deja de aplicarse solo. ===
+set "BRIDGE_TAG="
+set "BRIDGE_URL="
+set "BRIDGE_SHA="
+set "SC_THORD_TAG=%LAST_RELEASE%"
+set "SC_SELF_OWNER=%SELF_OWNER%"
+set "SC_SELF_REPO=%SELF_REPO%"
+for /f "usebackq tokens=1,2,3 delims=|" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=[IO.File]::ReadAllText('%~f0',[Text.Encoding]::UTF8); $i=$s.IndexOf('#PS_'+'BRIDGE'); $j=$s.IndexOf('#PS_'+'BEGIN'); & ([scriptblock]::Create($s.Substring($i,$j-$i)))"`) do (
+    set "BRIDGE_TAG=%%a"
+    set "BRIDGE_URL=%%b"
+    set "BRIDGE_SHA=%%c"
+)
+if defined BRIDGE_TAG (
+    call :log INFO "Traduccion puente disponible: !BRIDGE_TAG! (base: Thord %LAST_RELEASE%)"
+    set "THORD_RELEASE=%LAST_RELEASE%"
+    set "LAST_RELEASE=!BRIDGE_TAG!"
+    call :log INFO "Version a instalar: !LAST_RELEASE!"
+)
 
 REM === Verificar si existen archivos de traducción en cada canal de destino ===
 set "MISSING="
@@ -272,6 +294,7 @@ mkdir "%TEMP_DIR%" >nul 2>&1
 
 REM === Descargar ZIP ===
 set "ZIP_URL=https://github.com/%GITHUB_OWNER%/%GITHUB_REPO%/releases/latest/download/%ZIP_NAME%"
+if defined BRIDGE_URL set "ZIP_URL=%BRIDGE_URL%"
 set "ZIP_FILE=%TEMP_DIR%\%ZIP_NAME%"
 call :log INFO "Descargando %ZIP_NAME%..."
 powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%ZIP_URL%', '%ZIP_FILE%'); exit 0 } catch { exit 1 }"
@@ -303,6 +326,12 @@ if not defined ZIP_SHA256 (
     exit /b 1
 )
 call :log INFO "SHA256 del ZIP: %ZIP_SHA256%"
+if defined BRIDGE_SHA if /I not "%BRIDGE_SHA%"=="%ZIP_SHA256%" (
+    call :log ERROR "El hash del zip puente no coincide con el publicado por GitHub, se aborta sin tocar la instalacion"
+    rd /s /q "%TEMP_DIR%"
+    echo ======================================== >> "%LOG_FILE%"
+    exit /b 1
+)
 
 REM === Expandir ZIP ===
 call :log INFO "Extrayendo archivos..."
@@ -386,6 +415,15 @@ if /I "%SELF_LATEST%"=="%SCRIPT_VERSION%" (
     goto :eof
 )
 
+REM No retroceder: si la release publicada es MENOR que la instalada (release
+REM retirada o borrada) no se actualiza. Si alguna version no se puede interpretar
+REM (p. ej. "dev") se mantiene el comportamiento anterior y se actualiza.
+powershell -NoProfile -Command "try { if ([version]'%SELF_LATEST%' -gt [version]'%SCRIPT_VERSION%') { exit 0 } else { exit 1 } } catch { exit 0 }" >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    call :log INFO "La release publicada del script (%SELF_LATEST%) no es posterior a la actual (%SCRIPT_VERSION%), no se actualiza"
+    goto :eof
+)
+
 call :log INFO "Nueva version del script disponible: %SELF_LATEST% (actual: %SCRIPT_VERSION%), descargando..."
 
 set "SELF_TEMP=%TEMP%\%SELF_REPO%_selfupdate"
@@ -414,8 +452,9 @@ if %ERRORLEVEL% neq 0 (
 powershell -NoProfile -Command "try { (New-Object Net.WebClient).DownloadFile('%SELF_URL_VBS%', '%SELF_TEMP%\SC_Lang_updater.vbs') } catch {}" >nul 2>&1
 
 REM Integridad: la release publica un SHA256SUMS.txt (lo genera una GitHub Action).
-REM Si los hashes no coinciden se descarta la actualizacion. Si la release no lo
-REM publica (releases antiguas) se continua, dejando constancia en el log.
+REM Si los hashes no coinciden, o no se puede verificar (el archivo aun no esta
+REM publicado, falla la descarga o falta la entrada), se descarta la actualizacion
+REM y se reintenta en la siguiente ejecucion.
 REM Protege de descargas corruptas o truncadas; no protege frente a un
 REM repositorio comprometido, porque los hashes salen del mismo repositorio.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $c = (New-Object Net.WebClient).DownloadString('%SELF_URL_SUMS%') } catch { exit 3 }; foreach ($f in 'UpdateStarCitizenES.bat','SC_Lang_updater.vbs') { $p = Join-Path '%SELF_TEMP%' $f; if (-not (Test-Path $p)) { continue }; $m = [regex]::Match($c, '(?im)^([0-9a-f]{64})\s+\*?' + [regex]::Escape($f) + '\s*$'); if (-not $m.Success) { exit 3 }; if ((Get-FileHash $p -Algorithm SHA256).Hash -ne $m.Groups[1].Value) { exit 2 } }; exit 0" >nul 2>&1
@@ -426,7 +465,11 @@ if "%SUMS_RC%"=="2" (
     goto :eof
 )
 if "%SUMS_RC%"=="0" call :log OK "Integridad de la nueva version verificada (SHA256)"
-if not "%SUMS_RC%"=="0" call :log WARN "No se pudo verificar la integridad de la nueva version: la release no publica SHA256SUMS.txt"
+if not "%SUMS_RC%"=="0" (
+    call :log WARN "No se pudo verificar la integridad de la nueva version ^(falta SHA256SUMS.txt o la entrada del archivo^), se descarta y se reintentara en la proxima ejecucion"
+    rd /s /q "%SELF_TEMP%" >nul 2>&1
+    goto :eof
+)
 
 set "RELAUNCH_ARGS="
 if "%INTERACTIVE%"=="1" set "RELAUNCH_ARGS=/interactive"
@@ -463,7 +506,7 @@ goto :eof
 REM Imprime "  N) ruta" para el menú interactivo
 :print_option
 call set "VAL=%%FOUNDPATH_%~1%%"
-echo   %~1^) %VAL%
+echo   %~1^) !VAL!
 goto :eof
 
 REM Guarda el estado: %1=release instalada %2=ruta elegida %3=hash del zip
@@ -590,12 +633,41 @@ if errorlevel 1 (
 goto :eof
 
 :log
-echo [%TIME%] [%~1] %~2>> "%LOG_FILE%"
+REM La redireccion va ANTES del echo: si el mensaje acaba en un digito, "2>>" se
+REM interpretaria como redireccion del handle 2 y la linea no llegaria al log.
+>> "%LOG_FILE%" echo [%TIME%] [%~1] %~2
 goto :eof
 
 REM Seguridad: cmd nunca debe leer el bloque PowerShell de abajo como comandos.
 exit /b 0
 
+#PS_BRIDGE
+# Busca la pre-release "bridge-*" de este repo cuya BASE (linea "BASE=<tag de Thord>"
+# en la descripcion) sea la ultima release de Thord. Imprime TAG|URL|SHA256 o nada.
+# SC_BRIDGE_JSON (solo tests) sustituye a la llamada a la API de GitHub.
+$ErrorActionPreference = 'Stop'
+try {
+    if ($env:SC_BRIDGE_JSON) {
+        $rels = @(Get-Content -Raw -LiteralPath $env:SC_BRIDGE_JSON | ConvertFrom-Json)
+    } else {
+        $h = @{'User-Agent' = 'StarCitizenES-Updater'; 'Accept' = 'application/vnd.github.v3+json'}
+        $rels = @(Invoke-RestMethod -Uri ('https://api.github.com/repos/' + $env:SC_SELF_OWNER + '/' + $env:SC_SELF_REPO + '/releases?per_page=20') -Headers $h)
+    }
+    # Windows PowerShell 5.1 entrega un array JSON como un unico objeto: se aplana
+    $rels = @($rels | ForEach-Object { $_ })
+    foreach ($r in $rels) {
+        if ($r.draft -or -not $r.prerelease -or $r.tag_name -notlike 'bridge-*') { continue }
+        $m = [regex]::Match([string]$r.body, '(?im)^\s*BASE\s*=\s*(\S+)\s*$')
+        if (-not $m.Success) { continue }
+        if (($m.Groups[1].Value -replace '^v\.?', '') -ne $env:SC_THORD_TAG) { continue }
+        $a = @($r.assets | Where-Object { $_.name -eq 'Star_citizen_ES.zip' })[0]
+        if (-not $a) { continue }
+        $sha = ''
+        if ([string]$a.digest -match '^sha256:([0-9a-fA-F]{64})$') { $sha = $Matches[1] }
+        $r.tag_name + '|' + $a.browser_download_url + '|' + $sha
+        break
+    }
+} catch { }
 #PS_BEGIN
 # Deteccion de instalaciones de Star Citizen. Imprime una linea OK|ruta por
 # instalacion. Una instalacion es valida si tiene al menos un canal LIVE, HOTFIX,
