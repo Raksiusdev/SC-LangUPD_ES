@@ -15,7 +15,7 @@ jobs:
   vigilar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Comprobar y avisar
         env:
           GITHUB_TOKEN: ${{ github.token }}
