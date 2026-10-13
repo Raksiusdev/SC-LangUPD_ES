@@ -91,7 +91,9 @@ Assert (-not (Test-Path -LiteralPath (Join-Path $inst 'EPTU\data'))) 'NO instala
 Assert (Test-Path -LiteralPath (Join-Path $inst 'LIVE\user.cfg')) 'copia tambien user.cfg'
 $liveSize = ([IO.FileInfo](Get-Ini $inst 'LIVE')).Length
 Assert (([IO.FileInfo](Get-Ini $inst 'HOTFIX')).Length -eq $liveSize) 'HOTFIX usa los textos de LIVE'
-Assert (([IO.FileInfo](Get-Ini $inst 'PTU')).Length -ne $liveSize) 'PTU usa su propio global.ini'
+# Thord a veces publica LIVE y PTU identicos; entonces el tamano no distingue de donde viene el fichero.
+if (([IO.FileInfo](Get-Ini $inst 'PTU')).Length -eq $liveSize) { Write-Host '  SKIP  PTU usa su propio global.ini (en esta release de Thord LIVE y PTU son identicos)' }
+else { Assert (([IO.FileInfo](Get-Ini $inst 'PTU')).Length -ne $liveSize) 'PTU usa su propio global.ini' }
 Assert ($r.State -match 'PREVIEW_ON=PTU\r?\n') 'guarda la decision (PREVIEW_ON=PTU)'
 Assert ($r.Log -match 'Canal EPTU: el usuario decidio no instalar') 'deja constancia del rechazo en el log'
 
@@ -117,7 +119,10 @@ Assert ($r.State -match [regex]::Escape("INSTALL_PATH=$inst2") + '\r?\n') 'guard
 
 # ------------------------------------------------------------------------------
 Write-Host "== Traduccion puente: se usa mientras su BASE sea la ultima release de Thord"
-$thordTag = ((Invoke-RestMethod 'https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest' -Headers @{ 'User-Agent' = 'sc-tests' }).tag_name) -replace '^v\.?', ''
+$apiHeaders = @{ 'User-Agent' = 'sc-tests' }
+# En CI las peticiones sin autenticar comparten IP y GitHub las limita: usar el token si existe.
+if ($env:GITHUB_TOKEN) { $apiHeaders['Authorization'] = "Bearer $env:GITHUB_TOKEN" }
+$thordTag = ((Invoke-RestMethod 'https://api.github.com/repos/Thord82/Star_citizen_ES/releases/latest' -Headers $apiHeaders).tag_name) -replace '^v\.?', ''
 $bridgeZip = Join-Path $t 'puente.zip'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zf = [IO.Compression.ZipFile]::Open($bridgeZip, 'Create')

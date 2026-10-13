@@ -12,4 +12,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Ejecutar tests
         shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .\tests\run-all.ps1
