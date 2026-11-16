@@ -1,0 +1,5 @@
+# salida del generador del puente (puente/build_puente.py)
+salida/
+
+# ajustes personales del editor
+*.code-workspace
